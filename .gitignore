@@ -1,0 +1,25 @@
+# Virtual Environment
+.venv/
+env/
+venv/
+
+# Environment secrets
+.env
+
+# Cloudflared binary and tunnel
+cloudflared.exe
+tunnel_url.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Test database & logs
+test_inventory.db
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

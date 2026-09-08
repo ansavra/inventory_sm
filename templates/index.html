@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 ប្រព័ន្ធគ្រប់គ្រងស្តុកទំនិញ | SM Inventory Dashboard</title>
+    <!-- Google Fonts: Kantumruy Pro & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <div class="brand-icon">📦</div>
+                <div class="brand-text">
+                    <h1>SM Inventory</h1>
+                    <span>ប្រព័ន្ធគ្រប់គ្រងស្តុកទំនិញ</span>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <div class="status-pill">
+                    <span class="status-dot"></span>
+                    <span>ភ្ជាប់ជាមួយ Telegram Bot</span>
+                </div>
+                <div class="user-pill" id="user-profile-pill" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.06); padding: 0.35rem 0.8rem; border-radius: 9999px; border: 1px solid var(--border-color); font-size: 0.82rem;">
+                    <span>👤</span>
+                    <strong id="user-display-name">...</strong>
+                    <span class="badge badge-info" id="user-display-role" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">...</span>
+                </div>
+                <button class="btn btn-primary" id="btn-open-add-modal">
+                    <span>➕ បន្ថែមទំនិញថ្មី</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-logout" title="ចាកចេញពីប្រព័ន្ធ">
+                    <span>🚪 ចាកចេញ</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="container">
+        <!-- Stat Cards Grid -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon icon-blue">🏷️</div>
+                <div class="stat-details">
+                    <p class="stat-label">មុខទំនិញសរុប</p>
+                    <h3 class="stat-value" id="stat-total-products">0</h3>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon icon-amber">⚠️</div>
+                <div class="stat-details">
+                    <p class="stat-label">ទំនិញជិតអស់ពីស្តុក</p>
+                    <h3 class="stat-value" id="stat-low-stock">0</h3>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon icon-green">📥</div>
+                <div class="stat-details">
+                    <p class="stat-label">នាំចូលថ្ងៃនេះ</p>
+                    <h3 class="stat-value" id="stat-stock-in">0</h3>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon icon-purple">📤</div>
+                <div class="stat-details">
+                    <p class="stat-label">លក់ចេញថ្ងៃនេះ</p>
+                    <h3 class="stat-value" id="stat-stock-out">0</h3>
+                </div>
+            </div>
+
+            <div class="stat-card admin-only" id="card-total-cost">
+                <div class="stat-icon icon-emerald">💰</div>
+                <div class="stat-details">
+                    <p class="stat-label">តម្លៃដើមសរុបក្នុងស្តុក</p>
+                    <h3 class="stat-value" id="stat-total-val">$0.00</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="tab-products">📦 បញ្ជីទំនិញក្នុងស្តុក</button>
+            <button class="tab-btn" data-tab="tab-transactions">📜 ប្រវត្តិប្រតិបត្តិការ</button>
+            <button class="tab-btn admin-only" id="tab-btn-users" data-tab="tab-users" style="display: none;">👥 គ្រប់គ្រងបុគ្គលិក</button>
+        </div>
+
+        <!-- Products Section -->
+        <section id="tab-products" class="tab-pane active">
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="input-search" placeholder="ស្វែងរកតាមឈ្មោះ, លេខកូដ (SKU/Barcode)...">
+                </div>
+                <div class="filter-box">
+                    <select id="select-category">
+                        <option value="all">ប្រភេទទាំងអស់ (All)</option>
+                    </select>
+                </div>
+                <button class="btn btn-secondary" id="btn-refresh-products">
+                    <span>🔄 ផ្ទុកឡើងវិញ</span>
+                </button>
+                <a href="/api/export/products/csv" class="btn btn-secondary" id="btn-export-products-csv" title="ទាញយកបញ្ជីទំនិញជា CSV សម្រាប់ Excel" style="text-decoration: none;">
+                    <span>📥 ទាញយកជា CSV</span>
+                </a>
+                <a href="/report/print" target="_blank" class="btn btn-secondary" id="btn-print-report" title="បោះពុម្ព ឬរក្សាទុកជារបាយការណ៍ PDF" style="text-decoration: none;">
+                    <span>📄 ទាញយកជា PDF</span>
+                </a>
+            </div>
+
+            <!-- Table Container -->
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>កូដទំនិញ</th>
+                                <th>ឈ្មោះទំនិញ</th>
+                                <th>ប្រភេទ</th>
+                                <th>ស្តុកនៅសល់</th>
+                                <th>តម្លៃដើម</th>
+                                <th>តម្លៃលក់</th>
+                                <th>ទីតាំង</th>
+                                <th>ស្ថានភាព</th>
+                                <th style="text-align: right;">សកម្មភាព</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    កំពុងផ្ទុកទិន្នន័យ...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transactions Section -->
+        <section id="tab-transactions" class="tab-pane">
+            <div class="toolbar">
+                <h2 class="section-title">ប្រវត្តិប្រតិបត្តិការ នាំចូល-នាំចេញ ចុងក្រោយ</h2>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <a href="/api/export/transactions/csv" class="btn btn-secondary" id="btn-export-tx-csv" title="ទាញយកប្រវត្តិជា CSV សម្រាប់ Excel" style="text-decoration: none;">
+                        <span>📥 ទាញយកជា CSV</span>
+                    </a>
+                    <button class="btn btn-secondary" id="btn-refresh-tx">
+                        <span>🔄 ផ្ទុកឡើងវិញ</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>កាលបរិច្ឆេទ & ម៉ោង</th>
+                                <th>ប្រភេទ</th>
+                                <th>ទំនិញ</th>
+                                <th>ចំនួន</th>
+                                <th>តម្លៃ</th>
+                                <th>សរុប</th>
+                                <th>កំណត់ចំណាំ / វិក្កយបត្រ</th>
+                                <th>អ្នកកត់ត្រា</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tx-table-body">
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    កំពុងផ្ទុកទិន្នន័យ...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Staff Users Section (Admin Only) -->
+        <section id="tab-users" class="tab-pane admin-only">
+            <div class="toolbar">
+                <h2 class="section-title">👥 បញ្ជីគណនីបុគ្គលិក និងអ្នកគ្រប់គ្រង</h2>
+                <button class="btn btn-primary" id="btn-open-add-user-modal">
+                    <span>➕ បង្កើតគណនីបុគ្គលិកថ្មី</span>
+                </button>
+            </div>
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>លេខសម្គាល់ ID</th>
+                                <th>ឈ្មោះពេញ (Full Name)</th>
+                                <th>ឈ្មោះគណនី (Username)</th>
+                                <th>តួនាទី (Role)</th>
+                                <th>កាលបរិច្ឆេទបង្កើត</th>
+                                <th style="text-align: right;">សកម្មភាព</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    កំពុងផ្ទុកទិន្នន័យបុគ្គលិក...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Google Sheet Auto-Sync Settings Card (Admin Only) -->
+            <div class="table-card" style="margin-top: 1.5rem; padding: 1.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.05rem; color: #10b981; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>📊 ការភ្ជាប់ស្វ័យប្រវត្តិទៅ Google Sheets (Auto Sync)</span>
+                        </h3>
+                        <p class="text-muted small" style="margin-top: 0.25rem;">
+                            ទិន្នន័យនាំចូល និងនាំចេញ នឹងរត់ចូល Google Sheet របស់អ្នកភ្លាមៗតាមរយៈ Apps Script Webhook URL។
+                        </p>
+                    </div>
+                    <span class="badge badge-success" id="gsheet-status-badge" style="display: none;">✅ បានភ្ជាប់រួចរាល់</span>
+                </div>
+                <form id="form-gsheet-config" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <input type="url" id="gsheet-webhook-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex: 1; min-width: 280px; background: rgba(31, 41, 55, 0.7); border: 1px solid var(--border-color); padding: 0.65rem 0.9rem; border-radius: var(--radius-sm); color: var(--text-primary);">
+                    <button type="submit" class="btn btn-primary" id="btn-save-gsheet">
+                        <span>💾 រក្សាទុក Webhook</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Telegram Real-Time Alerts Settings Card (Admin Only) -->
+            <div class="table-card" style="margin-top: 1.5rem; padding: 1.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.05rem; color: #38bdf8; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🔔 ការជូនដំណឹង Real-time តាម Telegram (Stock Alerts)</span>
+                        </h3>
+                        <p class="text-muted small" style="margin-top: 0.25rem;">
+                            ប្រព័ន្ធនឹងផ្ញើសារស្វ័យប្រវត្តិតាម Telegram ទៅកាន់ Admins/Groups ពេលមានការនាំចេញ/លក់ ឬទំនិញជិតអស់ពីស្តុក (Low Stock Alert)។
+                        </p>
+                    </div>
+                    <span class="badge badge-success">✅ សកម្ម (Active)</span>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary" id="btn-test-telegram-alert" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+                        <span>📢 ធ្វើតេស្តផ្ញើសារ Alert ទៅ Telegram</span>
+                    </button>
+                    <span class="text-muted small" id="alert-test-status" style="font-size: 0.85rem;"></span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==========================================
+         Modals (ផ្ទាំង Popup បញ្ចូល និងកែប្រែទិន្នន័យ)
+         ========================================== -->
+
+    <!-- 1. Add Product Modal -->
+    <div class="modal-backdrop" id="modal-add-product">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>➕ បង្កើតទំនិញថ្មី</h3>
+                <button class="modal-close" data-close="modal-add-product">&times;</button>
+            </div>
+            <form id="form-add-product">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>លេខកូដទំនិញ (SKU / Barcode) *</label>
+                            <input type="text" name="code" required placeholder="ឧ. UNI-001 ឬ 8850123...">
+                        </div>
+                        <div class="form-group">
+                            <label>ឈ្មោះទំនិញ *</label>
+                            <input type="text" name="name" required placeholder="ឧ. Unikort-10">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ប្រភេទ/ក្រុមទំនិញ</label>
+                            <input type="text" name="category" value="ទូទៅ" placeholder="ឧ. ថ្នាំពេទ្យ, ភេសជ្ជៈ">
+                        </div>
+                        <div class="form-group">
+                            <label>ខ្នាតទំនិញ</label>
+                            <input type="text" name="unit" value="ប្រអប់" placeholder="ឧ. ប្រអប់, ដប, កំប៉ុង">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>តម្លៃទិញចូល ($)</label>
+                            <input type="number" step="0.01" name="cost_price" value="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>តម្លៃលក់ ($)</label>
+                            <input type="number" step="0.01" name="sell_price" value="0.00">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ចំនួនស្តុកដំបូង</label>
+                            <input type="number" name="quantity" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>កម្រិតជូនដំណឹងជិតអស់ (Min Qty)</label>
+                            <input type="number" name="min_quantity" value="5" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>ទីតាំងទុកដាក់ក្នុងឃ្លាំង</label>
+                        <input type="text" name="location" value="ឃ្លាំងធំ" placeholder="ឧ. ទូ A, ធ្នើរទី២">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-add-product">បោះបង់</button>
+                    <button type="submit" class="btn btn-primary">រក្សាទុក</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Stock In Modal -->
+    <div class="modal-backdrop" id="modal-stock-in">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>📥 នាំចូលទំនិញ (Stock In)</h3>
+                <button class="modal-close" data-close="modal-stock-in">&times;</button>
+            </div>
+            <form id="form-stock-in">
+                <input type="hidden" name="product_id" id="in-product-id">
+                <div class="modal-body">
+                    <p class="modal-subtitle" id="in-product-title">ទំនិញ៖ ...</p>
+                    <div class="form-group">
+                        <label>ចំនួនដែលត្រូវនាំចូលបន្ថែម *</label>
+                        <input type="number" name="quantity" required min="1" placeholder="ឧ. 10, 50">
+                    </div>
+                    <div class="form-group">
+                        <label>តម្លៃទិញចូលក្នុង ១ឯកតា ($)</label>
+                        <input type="number" step="0.01" name="unit_price" id="in-unit-price" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>កំណត់ចំណាំ / អ្នកផ្គត់ផ្គង់ / លេខវិក្កយបត្រ</label>
+                        <input type="text" name="reference" placeholder="ឧ. ទិញថែមពីក្រុមហ៊ុន A">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-stock-in">បោះបង់</button>
+                    <button type="submit" class="btn btn-success">យល់ព្រមនាំចូល</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Stock Out Modal -->
+    <div class="modal-backdrop" id="modal-stock-out">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>📤 នាំចេញ / លក់ចេញ (Stock Out)</h3>
+                <button class="modal-close" data-close="modal-stock-out">&times;</button>
+            </div>
+            <form id="form-stock-out">
+                <input type="hidden" name="product_id" id="out-product-id">
+                <div class="modal-body">
+                    <p class="modal-subtitle" id="out-product-title">ទំនិញ៖ ...</p>
+                    <div class="form-group">
+                        <label>ចំនួនដែលត្រូវដកចេញ / លក់ *</label>
+                        <input type="number" name="quantity" required min="1" placeholder="ឧ. 1, 5">
+                    </div>
+                    <div class="form-group">
+                        <label>តម្លៃលក់ជាក់ស្តែង ($)</label>
+                        <input type="number" step="0.01" name="unit_price" id="out-unit-price" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>មូលហេតុ / អតិថិជន / លេខវិក្កយបត្រ</label>
+                        <input type="text" name="reference" placeholder="ឧ. លក់ចេញរាយ, ខូចខាត">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-stock-out">បោះបង់</button>
+                    <button type="submit" class="btn btn-warning">យល់ព្រមកាត់ស្តុក</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Edit Product Modal -->
+    <div class="modal-backdrop" id="modal-edit-product">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>✏️ កែប្រែព័ត៌មានទំនិញ</h3>
+                <button class="modal-close" data-close="modal-edit-product">&times;</button>
+            </div>
+            <form id="form-edit-product">
+                <input type="hidden" name="product_id" id="edit-product-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ឈ្មោះទំនិញ *</label>
+                        <input type="text" name="name" id="edit-name" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ប្រភេទ</label>
+                            <input type="text" name="category" id="edit-category">
+                        </div>
+                        <div class="form-group">
+                            <label>ខ្នាត</label>
+                            <input type="text" name="unit" id="edit-unit">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>តម្លៃដើម ($)</label>
+                            <input type="number" step="0.01" name="cost_price" id="edit-cost">
+                        </div>
+                        <div class="form-group">
+                            <label>តម្លៃលក់ ($)</label>
+                            <input type="number" step="0.01" name="sell_price" id="edit-sell">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>កម្រិតជូនដំណឹងជិតអស់ (Min Qty)</label>
+                            <input type="number" name="min_quantity" id="edit-min-qty">
+                        </div>
+                        <div class="form-group">
+                            <label>ទីតាំងទុកដាក់</label>
+                            <input type="text" name="location" id="edit-location">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-edit-product">បោះបង់</button>
+                    <button type="submit" class="btn btn-primary">រក្សាទុកការកែប្រែ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. Delete Confirm Modal -->
+    <div class="modal-backdrop" id="modal-delete-confirm">
+        <div class="modal-dialog" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>🗑️ បញ្ជាក់ការលុបទំនិញ</h3>
+                <button class="modal-close" data-close="modal-delete-confirm">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="delete-prompt-text">តើបងពិតជាចង់លុបទំនិញនេះមែនទេ?</p>
+                <p class="text-danger small mt-2">⚠️ ការលុបនេះ នឹងលុបទិន្នន័យប្រវត្តិនាំចេញ-ចូលទាំងអស់របស់ទំនិញនេះចេញពីប្រព័ន្ធ!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modal-delete-confirm">ទេ កុំលុប</button>
+                <button type="button" class="btn btn-danger" id="btn-confirm-delete">បាទ/ចាស លុបចោល</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Add Staff User Modal (Admin Only) -->
+    <div class="modal-backdrop" id="modal-add-user">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>👥 បង្កើតគណនីបុគ្គលិកថ្មី</h3>
+                <button class="modal-close" data-close="modal-add-user">&times;</button>
+            </div>
+            <form id="form-add-user">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>ឈ្មោះពេញរបស់បុគ្គលិក (Full Name) *</label>
+                        <input type="text" name="full_name" required placeholder="ឧ. សុខ ដារ៉ា (Sok Dara)">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ឈ្មោះគណនី Login (Username) *</label>
+                            <input type="text" name="username" required placeholder="ឧ. dara123">
+                        </div>
+                        <div class="form-group">
+                            <label>តួនាទី (Role) *</label>
+                            <select name="role" style="width: 100%; background: rgba(31, 41, 55, 0.7); border: 1px solid var(--border-color); padding: 0.65rem 0.9rem; border-radius: var(--radius-sm); color: var(--text-primary);">
+                                <option value="staff">👷 បុគ្គលិក (Staff - មិនឃើញតម្លៃដើម)</option>
+                                <option value="admin">👑 អ្នកគ្រប់គ្រង (Admin - ឃើញទាំងអស់)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>លេខសម្ងាត់ដំបូង (Password) *</label>
+                        <div class="password-field-wrapper">
+                            <input type="password" name="password" id="new-user-pwd" required placeholder="•••••••• (យ៉ាងតិច ៤ តួ)">
+                            <button type="button" class="btn-toggle-eye" id="btn-toggle-new-user-pwd" title="បង្ហាញ/លាក់លេខសម្ងាត់" aria-label="បង្ហាញ/លាក់លេខសម្ងាត់">
+                                <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg class="eye-closed" style="display: none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-add-user">បោះបង់</button>
+                    <button type="submit" class="btn btn-primary">បង្កើតគណនី</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

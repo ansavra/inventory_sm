@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 ចូលប្រើប្រាស់ប្រព័ន្ធ | SM Inventory Login</title>
+    <!-- Google Fonts: Kantumruy Pro & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <style>
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: radial-gradient(circle at top right, #312e81 0%, #0b0f19 55%, #05070d 100%);
+        }
+        .login-card {
+            width: 100%;
+            max-width: 440px;
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: 2.5rem 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            animation: fadeIn 0.4s ease;
+        }
+        .login-brand {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-icon {
+            font-size: 2.8rem;
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+        .login-brand h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .login-brand p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fca5a5;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+        .login-footer-hint {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-brand">
+                <div class="login-icon">📦</div>
+                <h2>SM Inventory</h2>
+                <p>ប្រព័ន្ធគ្រប់គ្រងស្តុកទំនិញ</p>
+            </div>
+
+            <div class="alert-error" id="login-error">
+                ❌ ឈ្មោះគណនី ឬលេខសម្ងាត់មិនត្រឹមត្រូវទេ!
+            </div>
+
+            <form id="form-login">
+                <div class="form-group">
+                    <label>ឈ្មោះគណនី (Username) *</label>
+                    <input type="text" id="username" name="username" required autofocus placeholder="ឧ. admin ឬ ឈ្មោះបុគ្គលិក">
+                </div>
+
+                <div class="form-group">
+                    <label>លេខសម្ងាត់ (Password) *</label>
+                    <div class="password-field-wrapper">
+                        <input type="password" id="password" name="password" required placeholder="••••••••">
+                        <button type="button" class="btn-toggle-eye" id="btn-toggle-pwd" title="បង្ហាញ/លាក់លេខសម្ងាត់" aria-label="បង្ហាញ/លាក់លេខសម្ងាត់">
+                            <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg class="eye-closed" style="display: none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="btn-submit" style="width: 100%; padding: 0.85rem; margin-top: 0.5rem; font-size: 0.95rem;">
+                    <span>🔐 ចូលប្រើប្រាស់</span>
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <script>
+        const formLogin = document.getElementById('form-login');
+        const loginError = document.getElementById('login-error');
+        const btnSubmit = document.getElementById('btn-submit');
+        const btnTogglePwd = document.getElementById('btn-toggle-pwd');
+        const pwdInput = document.getElementById('password');
+        const eyeOpen = btnTogglePwd.querySelector('.eye-open');
+        const eyeClosed = btnTogglePwd.querySelector('.eye-closed');
+
+        btnTogglePwd.addEventListener('click', () => {
+            const isPassword = pwdInput.type === 'password';
+            pwdInput.type = isPassword ? 'text' : 'password';
+            eyeOpen.style.display = isPassword ? 'none' : 'block';
+            eyeClosed.style.display = isPassword ? 'block' : 'none';
+        });
+
+        formLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.style.display = 'none';
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<span>⏳ កំពុងផ្ទៀងផ្ទាត់...</span>';
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    // Redirect to dashboard
+                    window.location.href = '/';
+                } else {
+                    loginError.textContent = `❌ ${data.detail || 'ឈ្មោះគណនី ឬលេខសម្ងាត់មិនត្រឹមត្រូវទេ!'}`;
+                    loginError.style.display = 'block';
+                }
+            } catch (err) {
+                loginError.textContent = '❌ មិនអាចភ្ជាប់ទៅកាន់ Server បានទេ!';
+                loginError.style.display = 'block';
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<span>🔐 ចូលប្រើប្រាស់</span>';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📄 របាយការណ៍ស្តុកទំនិញ | SM Inventory Report</title>
+    <!-- Google Fonts: Kantumruy Pro & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-km: 'Kantumruy Pro', 'Plus Jakarta Sans', sans-serif;
+            --text-dark: #111827;
+            --border-dark: #d1d5db;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-km);
+            background: #f3f4f6;
+            color: var(--text-dark);
+            padding: 2rem;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* Top Bar for Screen only */
+        .no-print {
+            max-width: 900px;
+            margin: 0 auto 1.5rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
+            font-family: var(--font-km);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-print {
+            background: #4f46e5;
+            color: #ffffff;
+        }
+        .btn-print:hover { background: #4338ca; }
+
+        .btn-back {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .btn-back:hover { background: #d1d5db; }
+
+        /* A4 Page Container */
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 3rem 2.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #374151;
+            padding-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1e1b4b;
+            margin-bottom: 0.25rem;
+        }
+
+        .header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4338ca;
+            margin-bottom: 0.5rem;
+        }
+
+        .header .meta {
+            font-size: 0.88rem;
+            color: #4b5563;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-box {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            text-align: center;
+        }
+
+        .stat-box p {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-box h4 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        /* Products Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            margin-bottom: 2rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-dark);
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .badge-low {
+            color: #b91c1c;
+            font-weight: 600;
+        }
+
+        .badge-ok {
+            color: #047857;
+        }
+
+        /* Signatures */
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3rem;
+            padding: 0 2rem;
+        }
+
+        .sig-block {
+            text-align: center;
+        }
+
+        .sig-block p {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 4rem;
+        }
+
+        .sig-block span {
+            font-size: 0.85rem;
+            color: #6b7280;
+            border-top: 1px dotted #9ca3af;
+            padding-top: 0.25rem;
+            display: inline-block;
+            min-width: 150px;
+        }
+
+        /* Print Media Styles */
+        @media print {
+            body {
+                background: #ffffff;
+                padding: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .page {
+                box-shadow: none;
+                border-radius: 0;
+                padding: 1.5cm;
+                max-width: 100%;
+            }
+            tr {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Screen Navigation Toolbar -->
+    <div class="no-print">
+        <a href="/" class="btn btn-back">⬅️ ត្រឡប់ទៅ Dashboard</a>
+        <div>
+            <button class="btn btn-print" onclick="window.print()">🖨️ បោះពុម្ព ឬ រក្សាទុកជា PDF</button>
+        </div>
+    </div>
+
+    <!-- Official Report Page -->
+    <div class="page">
+        <div class="header">
+            <h1>📦 SM INVENTORY SYSTEM</h1>
+            <h2>របាយការណ៍ស្តុកទំនិញផ្លូវការ (Inventory Stock Report)</h2>
+            <div class="meta">
+                <span>កាលបរិច្ឆេទចេញ៖ <strong id="report-date">{{ report_date }}</strong></span>
+                <span>អ្នករៀបចំ៖ <strong>{{ user.full_name }} ({{ user.role }})</strong></span>
+            </div>
+        </div>
+
+        <div class="stats-summary">
+            <div class="stat-box">
+                <p>មុខទំនិញសរុប</p>
+                <h4>{{ stats.total_products }} មុខ</h4>
+            </div>
+            <div class="stat-box">
+                <p>ចំនួនក្នុងស្តុកសរុប</p>
+                <h4>{{ total_units }} ឯកតា</h4>
+            </div>
+            <div class="stat-box">
+                <p>ទំនិញជិតអស់</p>
+                <h4 style="color: #dc2626;">{{ stats.low_stock_count }} មុខ</h4>
+            </div>
+            <div class="stat-box">
+                {% if user.role == 'admin' %}
+                <p>តម្លៃដើមសរុប</p>
+                <h4 style="color: #059669;">${{ "%.2f"|format(stats.total_asset_cost) }}</h4>
+                {% else %}
+                <p>តម្លៃលក់សរុប</p>
+                <h4 style="color: #4f46e5;">${{ "%.2f"|format(stats.total_potential_revenue) }}</h4>
+                {% endif %}
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px; text-align: center;">ល.រ</th>
+                    <th>កូដទំនិញ</th>
+                    <th>ឈ្មោះទំនិញ</th>
+                    <th>ប្រភេទ</th>
+                    <th style="text-align: right;">ចំនួនស្តុក</th>
+                    {% if user.role == 'admin' %}
+                    <th style="text-align: right;">តម្លៃដើម ($)</th>
+                    {% endif %}
+                    <th style="text-align: right;">តម្លៃលក់ ($)</th>
+                    <th>ទីតាំង</th>
+                    <th style="text-align: center;">ស្ថានភាព</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in products %}
+                <tr>
+                    <td style="text-align: center;">{{ loop.index }}</td>
+                    <td><code>{{ p.code }}</code></td>
+                    <td><strong>{{ p.name }}</strong></td>
+                    <td>{{ p.category or 'ទូទៅ' }}</td>
+                    <td style="text-align: right;"><strong>{{ p.quantity }}</strong> {{ p.unit or 'ឯកតា' }}</td>
+                    {% if user.role == 'admin' %}
+                    <td style="text-align: right;">${{ "%.2f"|format(p.cost_price or 0.0) }}</td>
+                    {% endif %}
+                    <td style="text-align: right;">${{ "%.2f"|format(p.sell_price or 0.0) }}</td>
+                    <td>{{ p.location or 'ឃ្លាំងធំ' }}</td>
+                    <td style="text-align: center;">
+                        {% if p.quantity <= p.min_quantity %}
+                        <span class="badge-low">⚠️ ជិតអស់</span>
+                        {% else %}
+                        <span class="badge-ok">គ្រប់គ្រាន់</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="signatures">
+            <div class="sig-block">
+                <p>អ្នករៀបចំរបាយការណ៍</p>
+                <span>ហត្ថលេខា និងឈ្មោះ</span>
+            </div>
+            <div class="sig-block">
+                <p>ប្រធានឃ្លាំង / អ្នកអនុម័ត</p>
+                <span>ហត្ថលេខា និងឈ្មោះ</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

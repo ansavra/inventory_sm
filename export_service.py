@@ -31,7 +31,10 @@ def generate_products_csv(products: List[Dict[str, Any]], is_admin: bool = False
     for p in products:
         created = p.get('created_at', '')
         nearest = p.get('nearest_expiry') or ''
-        batches_str = "; ".join(f"{b['expiry_date']} x{b['quantity']}" for b in (p.get('batches') or []))
+        batches_str = "; ".join(
+            f"{(b.get('batch_no') + ' ') if b.get('batch_no') else ''}{b['expiry_date']} x{b['quantity']}"
+            for b in (p.get('batches') or [])
+        )
         if is_admin:
             writer.writerow([
                 p.get('code', ''),
@@ -72,7 +75,7 @@ def generate_transactions_csv(transactions: List[Dict[str, Any]], is_admin: bool
 
     headers = [
         "កាលបរិច្ឆេទ & ម៉ោង", "ប្រភេទ", "កូដទំនិញ", "ឈ្មោះទំនិញ",
-        "ចំនួន", "ឯកតា", "ថ្ងៃផុតកំណត់ (Expiry)", "តម្លៃរាយ ($)", "តម្លៃសរុប ($)",
+        "ចំនួន", "ឯកតា", "លេខឡូតិ៍ (Batch)", "ថ្ងៃផុតកំណត់ (Expiry)", "តម្លៃរាយ ($)", "តម្លៃសរុប ($)",
         "កំណត់ចំណាំ / វិក្កយបត្រ", "អ្នកកត់ត្រា"
     ]
     writer.writerow(headers)
@@ -94,6 +97,7 @@ def generate_transactions_csv(transactions: List[Dict[str, Any]], is_admin: bool
             t.get('product_name', ''),
             t.get('quantity', 0),
             t.get('product_unit', ''),
+            t.get('batch_no') or '',
             t.get('expiry_date') or '',
             unit_price,
             total_price,

@@ -74,14 +74,24 @@ function expiryStatusOf(isoDate) {
     return 'ok';
 }
 
-function expiryBadge(isoDate, qty) {
+function expiryBadge(isoDate, qty, batchNo) {
     const days = daysUntil(isoDate);
     const qtyStr = (qty !== undefined && qty !== null) ? ` ×${qty}` : '';
+    const lot = batchNo ? `<b>${escapeHtml(batchNo)}</b> · ` : '';
     if (days === null) return `<span class="badge badge-muted">— គ្មាន</span>`;
-    if (days < 0) return `<span class="badge badge-danger">🔴 ${isoDate}${qtyStr} (ផុត ${Math.abs(days)} ថ្ងៃ)</span>`;
-    if (days === 0) return `<span class="badge badge-danger">🔴 ${isoDate}${qtyStr} (ផុតថ្ងៃនេះ)</span>`;
-    if (days <= EXPIRY_WARN_DAYS) return `<span class="badge badge-warning">🟠 ${isoDate}${qtyStr} (${days} ថ្ងៃទៀត)</span>`;
-    return `<span class="badge badge-success">🟢 ${isoDate}${qtyStr} (${days} ថ្ងៃ)</span>`;
+    if (days < 0) return `<span class="badge badge-danger">🔴 ${lot}${isoDate}${qtyStr} (ផុត ${Math.abs(days)} ថ្ងៃ)</span>`;
+    if (days === 0) return `<span class="badge badge-danger">🔴 ${lot}${isoDate}${qtyStr} (ផុតថ្ងៃនេះ)</span>`;
+    if (days <= EXPIRY_WARN_DAYS) return `<span class="badge badge-warning">🟠 ${lot}${isoDate}${qtyStr} (${days} ថ្ងៃទៀត)</span>`;
+    return `<span class="badge badge-success">🟢 ${lot}${isoDate}${qtyStr} (${days} ថ្ងៃ)</span>`;
+}
+
+function daysLeftBadge(isoDate) {
+    const days = daysUntil(isoDate);
+    if (days === null) return `<span class="badge badge-muted">—</span>`;
+    if (days < 0) return `<span class="badge badge-danger">ផុត ${Math.abs(days)} ថ្ងៃ</span>`;
+    if (days === 0) return `<span class="badge badge-danger">ផុតថ្ងៃនេះ</span>`;
+    if (days <= EXPIRY_WARN_DAYS) return `<span class="badge badge-warning">${days} ថ្ងៃទៀត</span>`;
+    return `<span class="badge badge-success">${days} ថ្ងៃទៀត</span>`;
 }
 
 // ==========================================
@@ -364,7 +374,7 @@ function renderProductsTable() {
         } else {
             const first = batches[0];
             const more = batches.length > 1 ? `<span class="expiry-more">+${batches.length - 1} ឡូតិ៍</span>` : '';
-            expiryCell = `${expiryBadge(first.expiry_date, first.quantity)}${more}`;
+            expiryCell = `${expiryBadge(first.expiry_date, first.quantity, first.batch_no)}${more}`;
         }
         const expiryTd = `<td class="expiry-cell" onclick="openBatchesModal(${p.id})" title="ចុចដើម្បីមើល/គ្រប់គ្រងឡូតិ៍ផុតកំណត់ទាំងអស់">${expiryCell}</td>`;
 
@@ -423,7 +433,7 @@ function renderTransactionsTable(txs) {
                 <td>${typeBadge}</td>
                 <td><strong>${escapeHtml(t.product_name)}</strong> <small class="text-muted">(${escapeHtml(t.product_code)})</small></td>
                 <td><strong>${sign}${t.quantity}</strong> ${escapeHtml(t.product_unit)}</td>
-                <td class="small">${t.expiry_date ? expiryBadge(t.expiry_date) : '<span class="text-muted">—</span>'}</td>
+                <td class="small">${t.expiry_date ? expiryBadge(t.expiry_date, null, t.batch_no) : '<span class="text-muted">—</span>'}</td>
                 <td>${priceStr}</td>
                 <td><strong>${totalStr}</strong></td>
                 <td>${escapeHtml(t.reference || '-')}</td>
@@ -529,7 +539,8 @@ document.getElementById('form-add-product').addEventListener('submit', async (e)
         quantity: parseInt(formData.get('quantity')) || 0,
         min_quantity: parseInt(formData.get('min_quantity')) || 5,
         location: formData.get('location').trim() || 'ឃ្លាំងធំ',
-        expiry_date: formData.get('expiry_date') || null
+        expiry_date: formData.get('expiry_date') || null,
+        batch_no: (formData.get('batch_no') || '').trim() || null
     };
 
     try {
@@ -559,11 +570,12 @@ window.openStockInModal = function(productId) {
     document.getElementById('in-product-title').textContent = `ទំនិញ៖ ${product.name} (ស្តុកបច្ចុប្បន្ន: ${product.quantity} ${product.unit})`;
     document.getElementById('in-unit-price').value = (currentUser.role === 'admin') ? product.cost_price.toFixed(2) : '0.00';
     document.getElementById('in-expiry-date').value = '';
+    document.getElementById('in-batch-no').value = '';
     const hint = document.getElementById('in-existing-batches');
     const batches = product.batches || [];
     hint.innerHTML = batches.length
-        ? `ឡូតិ៍ដែលមានស្រាប់៖ ${batches.map(b => expiryBadge(b.expiry_date, b.quantity)).join(' ')}<br><small>បើបញ្ចូលថ្ងៃផុតកំណត់ដូចឡូតិ៍ស្រាប់ ចំនួននឹងបូកបញ្ចូលគ្នា; ថ្ងៃថ្មី = ឡូតិ៍ថ្មី។</small>`
-        : `<small>ទំនិញនេះមិនទាន់មានឡូតិ៍ផុតកំណត់ទេ — បញ្ចូលថ្ងៃផុតកំណត់ ដើម្បីតាមដាន (ទុកទទេបើគ្មាន)។</small>`;
+        ? `ឡូតិ៍ដែលមានស្រាប់៖ ${batches.map(b => expiryBadge(b.expiry_date, b.quantity, b.batch_no)).join(' ')}<br><small>លេខឡូតិ៍ + ថ្ងៃផុតកំណត់ ដូចឡូតិ៍ស្រាប់ = បូកបញ្ចូលគ្នា; ខុសគ្នា = ឡូតិ៍ថ្មី។</small>`
+        : `<small>ទំនិញនេះមិនទាន់មានឡូតិ៍ទេ — បញ្ចូលលេខឡូតិ៍ + ថ្ងៃផុតកំណត់ ដើម្បីតាមដាន (ទុកទទេបើគ្មាន)។</small>`;
     openModal('modal-stock-in');
 };
 
@@ -575,7 +587,8 @@ document.getElementById('form-stock-in').addEventListener('submit', async (e) =>
         quantity: parseInt(formData.get('quantity')),
         unit_price: parseFloat(formData.get('unit_price')) || 0,
         reference: formData.get('reference').trim() || 'នាំចូលតាម Web',
-        expiry_date: formData.get('expiry_date') || null
+        expiry_date: formData.get('expiry_date') || null,
+        batch_no: (formData.get('batch_no') || '').trim() || null
     };
 
     try {
@@ -588,7 +601,7 @@ document.getElementById('form-stock-in').addEventListener('submit', async (e) =>
         if (!res.ok) throw new Error(result.detail || 'បរាជ័យ');
 
         closeModal('modal-stock-in');
-        showToast(`📥 នាំចូល +${data.quantity} ជោគជ័យ!${data.expiry_date ? ' (ផុតកំណត់ ' + data.expiry_date + ')' : ''}`);
+        showToast(`📥 នាំចូល +${data.quantity} ជោគជ័យ!${data.expiry_date ? ' (' + (data.batch_no ? data.batch_no + ' · ' : '') + 'ផុតកំណត់ ' + data.expiry_date + ')' : ''}`);
         fetchStats();
         fetchProducts();
         fetchTransactions();
@@ -619,7 +632,7 @@ function populateBatchSelect(product, preselectBatchId) {
         const tag = days < 0 ? '🔴 ផុតកំណត់' : (days <= EXPIRY_WARN_DAYS ? '🟠 ជិតផុត' : '🟢');
         const opt = document.createElement('option');
         opt.value = b.id;
-        opt.textContent = `${tag} ${b.expiry_date} — នៅសល់ ${b.quantity} ${product.unit || ''}`;
+        opt.textContent = `${tag} ${b.batch_no ? b.batch_no + ' · ' : ''}${b.expiry_date} — នៅសល់ ${b.quantity} ${product.unit || ''}`;
         if (preselectBatchId && Number(preselectBatchId) === b.id) opt.selected = true;
         sel.appendChild(opt);
     });
@@ -648,7 +661,7 @@ document.getElementById('form-stock-out').addEventListener('submit', async (e) =
 
         closeModal('modal-stock-out');
         const ded = (result.product && result.product.batches_deducted) || [];
-        const dedStr = ded.length ? ' — ពីឡូតិ៍: ' + ded.map(d => `${d.expiry_date} ×${d.quantity}`).join(', ') : '';
+        const dedStr = ded.length ? ' — ពីឡូតិ៍: ' + ded.map(d => `${d.batch_no ? d.batch_no + ' ' : ''}${d.expiry_date} ×${d.quantity}`).join(', ') : '';
         showToast(`📤 កាត់ស្តុក -${data.quantity} ជោគជ័យ!${dedStr}`);
         fetchStats();
         fetchProducts();
@@ -672,8 +685,25 @@ window.openEditModal = function(productId) {
     document.getElementById('edit-sell').value = product.sell_price;
     document.getElementById('edit-min-qty').value = product.min_quantity;
     document.getElementById('edit-location').value = product.location;
+    document.getElementById('edit-batch-no').value = '';
+    document.getElementById('edit-batch-expiry').value = '';
+    document.getElementById('edit-batch-qty').value = 1;
+    editBatchesProductId = product.id;
+    loadBatchesTable(product.id, 'edit');
     openModal('modal-edit-product');
 };
+
+let editBatchesProductId = null;
+
+document.getElementById('btn-edit-add-batch').addEventListener('click', () => {
+    addBatchStockIn(
+        editBatchesProductId,
+        document.getElementById('edit-batch-no').value,
+        document.getElementById('edit-batch-expiry').value,
+        parseInt(document.getElementById('edit-batch-qty').value),
+        'edit'
+    );
+});
 
 document.getElementById('form-edit-product').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -976,7 +1006,7 @@ async function fetchExpiry() {
         renderExpiryTable(data.batches);
     } catch (err) {
         console.error(err);
-        body.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger">❌ មានបញ្ហាក្នុងការទាញយកទិន្នន័យ!</td></tr>`;
+        body.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-danger">❌ មានបញ្ហាក្នុងការទាញយកទិន្នន័យ!</td></tr>`;
     }
 }
 
@@ -984,7 +1014,7 @@ function renderExpiryTable(batches) {
     const body = document.getElementById('expiry-table-body');
     const isAdmin = currentUser && currentUser.role === 'admin';
     if (!batches.length) {
-        body.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">✅ មិនមានឡូតិ៍ត្រូវនឹងតម្រងនេះទេ។</td></tr>`;
+        body.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted">✅ មិនមានឡូតិ៍ត្រូវនឹងតម្រងនេះទេ។</td></tr>`;
         return;
     }
     body.innerHTML = batches.map(b => {
@@ -997,6 +1027,7 @@ function renderExpiryTable(batches) {
         const discardBtn = isAdmin ? `<button class="btn btn-danger btn-sm" onclick="discardBatch(${b.id}, '${b.expiry_date}', ${b.quantity})" title="បោះចោលឡូតិ៍ (កាត់ស្តុក)">🗑️ បោះចោល</button>` : '';
         return `
             <tr>
+                <td>${b.batch_no ? `<span class="badge badge-code">${escapeHtml(b.batch_no)}</span>` : '<span class="text-muted">—</span>'}</td>
                 <td><strong>${b.expiry_date}</strong></td>
                 <td>${left}</td>
                 <td><strong>${escapeHtml(b.product_name)}</strong> <small class="text-muted">(${escapeHtml(b.product_code)})</small></td>
@@ -1029,7 +1060,10 @@ window.discardBatch = async function(batchId, expiry, qty) {
         showToast(result.message);
         fetchStats(); fetchProducts(); fetchExpiry();
         if (document.getElementById('modal-batches').classList.contains('show')) {
-            openBatchesModal(parseInt(document.getElementById('batch-add-product-id').value));
+            loadBatchesTable(parseInt(document.getElementById('batch-add-product-id').value), 'modal');
+        }
+        if (document.getElementById('modal-edit-product').classList.contains('show') && editBatchesProductId) {
+            loadBatchesTable(editBatchesProductId, 'edit');
         }
     } catch (err) {
         showToast(err.message, 'error');
@@ -1037,62 +1071,82 @@ window.discardBatch = async function(batchId, expiry, qty) {
 };
 
 // ==========================================
-// Batches Modal (per product)
+// Batches (per product) — shared by Batches modal & Edit modal
+// ctx = 'modal' (modal-batches) | 'edit' (inside edit-product modal)
 // ==========================================
-window.openBatchesModal = async function(productId) {
-    const body = document.getElementById('batches-table-body');
+const BATCH_CTX = {
+    modal: { body: 'batches-table-body', note: 'batches-untracked-note', title: 'batches-product-title', summary: null },
+    edit:  { body: 'edit-batches-body',  note: 'edit-batches-note',      title: null,                    summary: 'edit-batches-summary' }
+};
+
+async function loadBatchesTable(productId, ctx) {
+    const cfg = BATCH_CTX[ctx];
+    const body = document.getElementById(cfg.body);
     const isAdmin = currentUser && currentUser.role === 'admin';
-    document.getElementById('batch-add-product-id').value = productId;
-    document.getElementById('batch-add-expiry').value = '';
-    document.getElementById('batch-add-qty').value = 1;
-    body.innerHTML = `<tr><td colspan="4" class="text-center text-muted">កំពុងផ្ទុក...</td></tr>`;
-    openModal('modal-batches');
+    body.innerHTML = `<tr><td colspan="5" class="text-center text-muted">កំពុងផ្ទុក...</td></tr>`;
     try {
         const res = await fetch(`/api/products/${productId}/batches`);
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
-        document.getElementById('batches-product-title').textContent =
-            `ទំនិញ៖ ${data.product.name} (${data.product.code}) — ស្តុកសរុប ${data.product.quantity} ${data.product.unit}`;
-        const note = document.getElementById('batches-untracked-note');
-        note.textContent = data.untracked_qty > 0
-            ? `ℹ️ មាន ${data.untracked_qty} ${data.product.unit} ដែលមិនមានថ្ងៃផុតកំណត់ (ស្តុកចាស់ ឬនាំចូលដោយមិនបញ្ចូលថ្ងៃ)។`
+        if (cfg.title) {
+            document.getElementById(cfg.title).textContent =
+                `ទំនិញ៖ ${data.product.name} (${data.product.code}) — ស្តុកសរុប ${data.product.quantity} ${data.product.unit}`;
+        }
+        if (cfg.summary) {
+            document.getElementById(cfg.summary).textContent =
+                `${data.batches.length} ឡូតិ៍ · តាមដាន ${data.tracked_qty}/${data.product.quantity} ${data.product.unit}`;
+        }
+        document.getElementById(cfg.note).textContent = data.untracked_qty > 0
+            ? `ℹ️ មាន ${data.untracked_qty} ${data.product.unit} ដែលមិនមានលេខឡូតិ៍/ថ្ងៃផុតកំណត់ (ស្តុកចាស់ ឬនាំចូលដោយមិនបញ្ចូល)។`
             : '';
         if (!data.batches.length) {
-            body.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-5">📭 មិនទាន់មានឡូតិ៍ផុតកំណត់ទេ — បន្ថែមខាងក្រោម។</td></tr>`;
+            body.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-5">📭 មិនទាន់មានឡូតិ៍ទេ — បន្ថែមខាងក្រោម។</td></tr>`;
             return;
         }
+        const pfx = ctx === 'edit' ? 'e' : 'm';
         body.innerHTML = data.batches.map(b => {
-            const days = daysUntil(b.expiry_date);
-            const left = days < 0 ? `<span class="badge badge-danger">ផុត ${Math.abs(days)} ថ្ងៃ</span>`
-                : days <= EXPIRY_WARN_DAYS ? `<span class="badge badge-warning">${days} ថ្ងៃទៀត</span>`
-                : `<span class="badge badge-success">${days} ថ្ងៃទៀត</span>`;
             const qtyCell = isAdmin
-                ? `<input type="number" class="batch-edit-input" style="width:80px" value="${b.quantity}" min="0" id="bq-${b.id}">`
+                ? `<input type="number" class="batch-edit-input" style="width:76px" value="${b.quantity}" min="0" id="${pfx}bq-${b.id}">`
                 : `<strong>${b.quantity}</strong>`;
-            const discard = isAdmin ? `<button class="btn btn-danger btn-sm" onclick="discardBatch(${b.id}, '${b.expiry_date}', ${b.quantity})">🗑️</button>` : '';
+            const discard = isAdmin ? `<button class="btn btn-danger btn-sm" onclick="discardBatch(${b.id}, '${b.expiry_date}', ${b.quantity})" title="បោះចោលឡូតិ៍">🗑️</button>` : '';
+            const closeFirst = ctx === 'edit' ? "closeModal('modal-edit-product');" : "closeModal('modal-batches');";
             return `
                 <tr>
-                    <td><input type="date" class="batch-edit-input" value="${b.expiry_date}" id="bd-${b.id}"></td>
-                    <td>${left}</td>
+                    <td><input type="text" class="batch-edit-input" style="width:110px" value="${escapeHtml(b.batch_no || '')}" placeholder="—" id="${pfx}bn-${b.id}"></td>
+                    <td><input type="date" class="batch-edit-input" value="${b.expiry_date}" id="${pfx}bd-${b.id}"></td>
+                    <td>${daysLeftBadge(b.expiry_date)}</td>
                     <td>${qtyCell}</td>
                     <td>
                         <div class="actions-cell">
-                            <button class="btn btn-primary btn-sm" onclick="saveBatch(${b.id}, ${isAdmin})">💾</button>
-                            <button class="btn btn-warning btn-sm" onclick="closeModal('modal-batches'); openStockOutModal(${productId}, ${b.id})">📤</button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="saveBatch(${b.id}, ${isAdmin}, '${ctx}')" title="រក្សាទុក">💾</button>
+                            <button type="button" class="btn btn-warning btn-sm" onclick="${closeFirst} openStockOutModal(${productId}, ${b.id})" title="ដកចេញពីឡូតិ៍នេះ">📤</button>
                             ${discard}
                         </div>
                     </td>
                 </tr>`;
         }).join('');
     } catch (err) {
-        body.innerHTML = `<tr><td colspan="4" class="text-center text-danger">❌ បរាជ័យក្នុងការទាញយកឡូតិ៍</td></tr>`;
+        body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">❌ បរាជ័យក្នុងការទាញយកឡូតិ៍</td></tr>`;
     }
+}
+
+window.openBatchesModal = function(productId) {
+    document.getElementById('batch-add-product-id').value = productId;
+    document.getElementById('batch-add-no').value = '';
+    document.getElementById('batch-add-expiry').value = '';
+    document.getElementById('batch-add-qty').value = 1;
+    openModal('modal-batches');
+    loadBatchesTable(productId, 'modal');
 };
 
-window.saveBatch = async function(batchId, isAdmin) {
-    const payload = { expiry_date: document.getElementById(`bd-${batchId}`).value };
+window.saveBatch = async function(batchId, isAdmin, ctx) {
+    const pfx = ctx === 'edit' ? 'e' : 'm';
+    const payload = {
+        expiry_date: document.getElementById(`${pfx}bd-${batchId}`).value,
+        batch_no: document.getElementById(`${pfx}bn-${batchId}`).value.trim()
+    };
     if (isAdmin) {
-        const q = document.getElementById(`bq-${batchId}`);
+        const q = document.getElementById(`${pfx}bq-${batchId}`);
         if (q) payload.quantity = parseInt(q.value);
     }
     try {
@@ -1102,36 +1156,57 @@ window.saveBatch = async function(batchId, isAdmin) {
         const result = await res.json();
         if (!res.ok) throw new Error(result.detail || 'បរាជ័យ');
         showToast(result.message);
-        const pid = parseInt(document.getElementById('batch-add-product-id').value);
-        fetchStats(); fetchProducts(); openBatchesModal(pid);
+        const pid = ctx === 'edit' ? editBatchesProductId : parseInt(document.getElementById('batch-add-product-id').value);
+        fetchStats(); fetchProducts(); loadBatchesTable(pid, ctx);
         if (document.getElementById('tab-expiry').classList.contains('active')) fetchExpiry();
     } catch (err) {
         showToast(err.message, 'error');
     }
 };
 
-document.getElementById('form-add-batch').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const pid = parseInt(document.getElementById('batch-add-product-id').value);
+async function addBatchStockIn(productId, batchNo, expiry, qty, ctx) {
+    if (!expiry) { showToast('សូមបញ្ចូលថ្ងៃផុតកំណត់!', 'error'); return; }
+    if (!qty || qty < 1) { showToast('ចំនួនត្រូវតែធំជាង ០!', 'error'); return; }
     const data = {
-        product_id: pid,
-        quantity: parseInt(document.getElementById('batch-add-qty').value),
+        product_id: productId,
+        quantity: qty,
         unit_price: 0,
-        reference: 'បន្ថែមឡូតិ៍ផុតកំណត់តាម Web',
-        expiry_date: document.getElementById('batch-add-expiry').value
+        reference: 'បន្ថែមឡូតិ៍តាម Web',
+        expiry_date: expiry,
+        batch_no: (batchNo || '').trim() || null
     };
-    if (!data.expiry_date) { showToast('សូមបញ្ចូលថ្ងៃផុតកំណត់!', 'error'); return; }
     try {
         const res = await fetch('/api/stock-in', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.detail || 'បរាជ័យ');
-        showToast(`📥 បានបន្ថែមឡូតិ៍ ${data.expiry_date} (+${data.quantity})`);
-        fetchStats(); fetchProducts(); fetchTransactions(); openBatchesModal(pid);
+        showToast(`📥 បានបន្ថែមឡូតិ៍ ${data.batch_no ? data.batch_no + ' · ' : ''}${expiry} (+${qty})`);
+        fetchStats(); fetchProducts(); fetchTransactions();
+        loadBatchesTable(productId, ctx);
+        if (ctx === 'edit') {
+            document.getElementById('edit-batch-no').value = '';
+            document.getElementById('edit-batch-expiry').value = '';
+            document.getElementById('edit-batch-qty').value = 1;
+        } else {
+            document.getElementById('batch-add-no').value = '';
+            document.getElementById('batch-add-expiry').value = '';
+            document.getElementById('batch-add-qty').value = 1;
+        }
     } catch (err) {
         showToast(err.message, 'error');
     }
+}
+
+document.getElementById('form-add-batch').addEventListener('submit', (e) => {
+    e.preventDefault();
+    addBatchStockIn(
+        parseInt(document.getElementById('batch-add-product-id').value),
+        document.getElementById('batch-add-no').value,
+        document.getElementById('batch-add-expiry').value,
+        parseInt(document.getElementById('batch-add-qty').value),
+        'modal'
+    );
 });
 
 // ==========================================

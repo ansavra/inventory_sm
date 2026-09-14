@@ -106,6 +106,6 @@ async def reports_callback_handler(update: Update, context: ContextTypes.DEFAULT
                 tag = f"🟠 នៅ {b['days_left']} ថ្ងៃទៀត"
             text += (
                 f"• **{b['product_name']}** (`{b['product_code']}`)\n"
-                f"   ⏰ {b['expiry_date']} — {tag} — សល់ **{b['quantity']} {b['product_unit']}**\n"
+                f"   {('🏷️ ' + b['batch_no'] + ' | ') if b.get('batch_no') else ''}⏰ {b['expiry_date']} — {tag} — សល់ **{b['quantity']} {b['product_unit']}**\n"
             )
         await query.message.reply_text(text, parse_mode="Markdown")

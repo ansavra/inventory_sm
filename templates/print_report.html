@@ -272,7 +272,7 @@
                     {% endif %}
                     <th style="text-align: right;">តម្លៃលក់ ($)</th>
                     <th>ទីតាំង</th>
-                    <th>ថ្ងៃផុតកំណត់</th>
+                    <th>ឡូតិ៍ / ថ្ងៃផុតកំណត់</th>
                     <th style="text-align: center;">ស្ថានភាព</th>
                 </tr>
             </thead>
@@ -292,9 +292,9 @@
                     <td style="font-size: 0.8em; white-space: nowrap;">
                         {% if p.batches %}
                             {% for b in p.batches %}
-                                {% if b.status == 'expired' %}<span class="badge-low">🔴 {{ b.expiry_date }} ×{{ b.quantity }}</span>
-                                {% elif b.status == 'soon' %}<span class="badge-low" style="opacity:0.8;">🟠 {{ b.expiry_date }} ×{{ b.quantity }}</span>
-                                {% else %}<span>🟢 {{ b.expiry_date }} ×{{ b.quantity }}</span>{% endif %}<br>
+                                {% if b.status == 'expired' %}<span class="badge-low">🔴 {% if b.batch_no %}{{ b.batch_no }} · {% endif %}{{ b.expiry_date }} ×{{ b.quantity }}</span>
+                                {% elif b.status == 'soon' %}<span class="badge-low" style="opacity:0.8;">🟠 {% if b.batch_no %}{{ b.batch_no }} · {% endif %}{{ b.expiry_date }} ×{{ b.quantity }}</span>
+                                {% else %}<span>🟢 {% if b.batch_no %}{{ b.batch_no }} · {% endif %}{{ b.expiry_date }} ×{{ b.quantity }}</span>{% endif %}<br>
                             {% endfor %}
                         {% else %}—{% endif %}
                     </td>

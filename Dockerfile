@@ -21,5 +21,6 @@ EXPOSE 8000
 
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
+ENV TZ=Asia/Phnom_Penh
 
 CMD ["python", "run_cloud.py"]

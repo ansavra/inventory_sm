@@ -91,6 +91,7 @@ class ProductCreateRequest(BaseModel):
     min_quantity: int = 5
     location: str = "ឃ្លាំងធំ"
     expiry_date: Optional[str] = None
+    batch_no: Optional[str] = None
 
 
 class ProductUpdateRequest(BaseModel):
@@ -109,6 +110,7 @@ class StockInRequest(BaseModel):
     unit_price: float = 0.0
     reference: str = "នាំចូលតាម Web"
     expiry_date: Optional[str] = None
+    batch_no: Optional[str] = None
 
 
 class StockOutRequest(BaseModel):
@@ -122,6 +124,7 @@ class StockOutRequest(BaseModel):
 class BatchUpdateRequest(BaseModel):
     expiry_date: Optional[str] = None
     quantity: Optional[int] = None
+    batch_no: Optional[str] = None
 
 
 class StockAdjustRequest(BaseModel):
@@ -343,7 +346,8 @@ async def create_product(req: ProductCreateRequest, user: Dict[str, Any] = Depen
             unit_price=req.cost_price,
             reference="ស្តុកដំបូងពេលបង្កើតតាម Web",
             user_id=user["user_id"],
-            expiry_date=req.expiry_date
+            expiry_date=req.expiry_date,
+            batch_no=req.batch_no
         )
         if not ok_in:
             return {"success": True, "message": f"បង្កើតទំនិញរួច ប៉ុន្តែស្តុកដំបូងមិនបានកត់ត្រា៖ {msg_in}", "id": prod_id}
@@ -389,7 +393,8 @@ async def stock_in_endpoint(req: StockInRequest, user: Dict[str, Any] = Depends(
         unit_price=req.unit_price,
         reference=req.reference,
         user_id=user["user_id"],
-        expiry_date=req.expiry_date
+        expiry_date=req.expiry_date,
+        batch_no=req.batch_no
     )
     if not success:
         raise HTTPException(status_code=400, detail=msg)
@@ -592,7 +597,8 @@ async def update_batch_endpoint(batch_id: int, req: BatchUpdateRequest, user: Di
     """កែថ្ងៃផុតកំណត់ ឬចំនួនរបស់ឡូតិ៍ (ការកែចំនួន សម្រាប់ Admin ប៉ុណ្ណោះ)"""
     if req.quantity is not None and user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="មានតែ Admin ទើបអាចកែចំនួនឡូតិ៍បាន!")
-    ok, msg = db.update_batch(batch_id, expiry_date=req.expiry_date, quantity=req.quantity, user_id=user["user_id"])
+    ok, msg = db.update_batch(batch_id, expiry_date=req.expiry_date, quantity=req.quantity,
+                              user_id=user["user_id"], batch_no=req.batch_no)
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
     return {"success": True, "message": msg}

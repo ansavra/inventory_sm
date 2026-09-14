@@ -881,3 +881,34 @@ input[type="date"] { color-scheme: dark; }
     .form-row { grid-template-columns: 1fr; }
     .cal-day { min-height: 64px; font-size: 0.68rem; }
 }
+
+/* Batch & Expiry section inside Edit modal */
+.batch-section {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border-color);
+}
+.batch-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+    color: #c7d2fe;
+    font-size: 0.9rem;
+}
+.batch-table th, .batch-table td { padding: 0.5rem 0.6rem; font-size: 0.8rem; }
+.batch-add-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1.2fr 0.7fr auto;
+    gap: 0.6rem;
+    align-items: end;
+    margin-top: 0.75rem;
+}
+.batch-add-row .form-group label { font-size: 0.72rem; }
+.modal-dialog.modal-wide { max-width: 720px; }
+.modal-body { max-height: 78vh; overflow-y: auto; }
+@media (max-width: 720px) {
+    .batch-add-row { grid-template-columns: 1fr 1fr; }
+}

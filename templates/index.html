@@ -150,7 +150,7 @@
                                 <th>ឈ្មោះទំនិញ</th>
                                 <th>ប្រភេទ</th>
                                 <th>ស្តុកនៅសល់</th>
-                                <th>ថ្ងៃផុតកំណត់</th>
+                                <th>ឡូតិ៍ / ផុតកំណត់</th>
                                 <th>តម្លៃដើម</th>
                                 <th>តម្លៃលក់</th>
                                 <th>ទីតាំង</th>
@@ -230,7 +230,7 @@
                                 <th>ប្រភេទ</th>
                                 <th>ទំនិញ</th>
                                 <th>ចំនួន</th>
-                                <th>ផុតកំណត់</th>
+                                <th>ឡូតិ៍ / ផុតកំណត់</th>
                                 <th>តម្លៃ</th>
                                 <th>សរុប</th>
                                 <th>កំណត់ចំណាំ / វិក្កយបត្រ</th>
@@ -310,6 +310,7 @@
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th>លេខឡូតិ៍</th>
                                 <th>ថ្ងៃផុតកំណត់</th>
                                 <th>នៅសល់</th>
                                 <th>ទំនិញ</th>
@@ -320,7 +321,7 @@
                             </tr>
                         </thead>
                         <tbody id="expiry-table-body">
-                            <tr><td colspan="7" class="text-center py-5 text-muted">កំពុងផ្ទុកទិន្នន័យ...</td></tr>
+                            <tr><td colspan="8" class="text-center py-5 text-muted">កំពុងផ្ទុកទិន្នន័យ...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -456,6 +457,10 @@
                             <input type="date" name="expiry_date">
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label>🏷️ លេខឡូតិ៍ស្តុកដំបូង (Batch / Lot No.)</label>
+                        <input type="text" name="batch_no" placeholder="ឧ. LOT-A101 (ទុកទទេបើគ្មាន)">
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>កម្រិតជូនដំណឹងជិតអស់ (Min Qty)</label>
@@ -500,6 +505,10 @@
                             <label>⏰ ថ្ងៃផុតកំណត់ (Expiry)</label>
                             <input type="date" name="expiry_date" id="in-expiry-date">
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label>🏷️ លេខឡូតិ៍ (Batch / Lot No.)</label>
+                        <input type="text" name="batch_no" id="in-batch-no" placeholder="ឧ. LOT-A101 (ទុកទទេបើគ្មាន)">
                     </div>
                     <div id="in-existing-batches" class="batch-hint"></div>
                     <div class="form-group">
@@ -555,7 +564,7 @@
 
     <!-- 4. Edit Product Modal -->
     <div class="modal-backdrop" id="modal-edit-product">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-wide">
             <div class="modal-header">
                 <h3>✏️ កែប្រែព័ត៌មានទំនិញ</h3>
                 <button class="modal-close" data-close="modal-edit-product">&times;</button>
@@ -596,6 +605,45 @@
                             <label>ទីតាំងទុកដាក់</label>
                             <input type="text" name="location" id="edit-location">
                         </div>
+                    </div>
+
+                    <!-- Batch & Expiry section -->
+                    <div class="batch-section">
+                        <div class="batch-section-head">
+                            <strong>🏷️ លេខឡូតិ៍ & ថ្ងៃផុតកំណត់ (Batch No. & Expiry)</strong>
+                            <span class="text-muted small" id="edit-batches-summary"></span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table batch-table">
+                                <thead>
+                                    <tr>
+                                        <th>លេខឡូតិ៍</th>
+                                        <th>ថ្ងៃផុតកំណត់</th>
+                                        <th>នៅសល់</th>
+                                        <th>ចំនួន</th>
+                                        <th style="text-align: right;">សកម្មភាព</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="edit-batches-body"></tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted small mt-2" id="edit-batches-note"></p>
+                        <div class="batch-add-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>➕ លេខឡូតិ៍ថ្មី</label>
+                                <input type="text" id="edit-batch-no" placeholder="LOT-001">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>ថ្ងៃផុតកំណត់ *</label>
+                                <input type="date" id="edit-batch-expiry">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>ចំនួន</label>
+                                <input type="number" id="edit-batch-qty" min="1" value="1">
+                            </div>
+                            <button type="button" class="btn btn-success btn-sm" id="btn-edit-add-batch" style="height: 40px;">📥 បន្ថែម</button>
+                        </div>
+                        <p class="text-muted small" style="margin-top:0.5rem;">💡 ការបន្ថែមឡូតិ៍ = នាំចូលស្តុកបន្ថែម (កត់ត្រាជា Stock In)។ ចុច 💾 ដើម្បីរក្សាទុកការកែលេខឡូតិ៍/ថ្ងៃ/ចំនួន នៃជួរនីមួយៗ។</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -679,15 +727,16 @@
     <div class="modal-backdrop" id="modal-batches">
         <div class="modal-dialog" style="max-width: 640px;">
             <div class="modal-header">
-                <h3>⏰ ថ្ងៃផុតកំណត់តាមឡូតិ៍</h3>
+                <h3>🏷️ លេខឡូតិ៍ & ថ្ងៃផុតកំណត់</h3>
                 <button class="modal-close" data-close="modal-batches">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="modal-subtitle" id="batches-product-title">ទំនិញ៖ ...</p>
                 <div class="table-responsive">
-                    <table class="data-table" style="font-size: 0.85rem;">
+                    <table class="data-table batch-table" style="font-size: 0.85rem;">
                         <thead>
                             <tr>
+                                <th>លេខឡូតិ៍</th>
                                 <th>ថ្ងៃផុតកំណត់</th>
                                 <th>នៅសល់</th>
                                 <th>ចំនួន</th>
@@ -700,9 +749,13 @@
                 <p class="text-muted small mt-2" id="batches-untracked-note"></p>
                 <form id="form-add-batch" class="batch-add-form">
                     <input type="hidden" id="batch-add-product-id">
-                    <div class="form-row" style="grid-template-columns: 1fr 1fr auto; align-items: end;">
+                    <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items: end;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label>➕ បន្ថែមឡូតិ៍ថ្មី — ថ្ងៃផុតកំណត់</label>
+                            <label>➕ លេខឡូតិ៍ថ្មី</label>
+                            <input type="text" id="batch-add-no" placeholder="LOT-001">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>ថ្ងៃផុតកំណត់ *</label>
                             <input type="date" id="batch-add-expiry" required>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
@@ -731,12 +784,12 @@
                     <div class="import-steps">
                         <div class="import-step">
                             <strong>១. ទាញយកឯកសារគំរូ</strong>
-                            <p class="text-muted small">បំពេញទិន្នន័យតាមគំរូ។ ទំនិញ ១ អាចមានច្រើនជួរ ដោយប្រើ <code>code</code> ដូចគ្នា តែ <code>expiry_date</code> ខុសគ្នា = ឡូតិ៍ផុតកំណត់ច្រើន។</p>
+                            <p class="text-muted small">បំពេញទិន្នន័យតាមគំរូ។ ទំនិញ ១ អាចមានច្រើនជួរ ដោយប្រើ <code>code</code> ដូចគ្នា តែ <code>batch_no</code> / <code>expiry_date</code> ខុសគ្នា = ឡូតិ៍ច្រើន។</p>
                             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                                 <a href="/api/import/sample?format=csv" class="btn btn-secondary btn-sm" style="text-decoration:none;">📄 គំរូ CSV</a>
                                 <a href="/api/import/sample?format=xlsx" class="btn btn-secondary btn-sm" style="text-decoration:none;">📊 គំរូ Excel (.xlsx)</a>
                             </div>
-                            <p class="text-muted small mt-2">Columns: <code>code, name, category, unit, cost_price, sell_price, quantity, min_quantity, location, expiry_date (YYYY-MM-DD), reference</code></p>
+                            <p class="text-muted small mt-2">Columns: <code>code, name, category, unit, cost_price, sell_price, quantity, min_quantity, location, batch_no, expiry_date (YYYY-MM-DD), reference</code></p>
                         </div>
                         <div class="import-step">
                             <strong>២. ជ្រើសរើសឯកសារ</strong>

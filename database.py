@@ -72,24 +72,50 @@ def init_db():
             CREATE TABLE IF NOT EXISTS product_batches (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 product_id INTEGER NOT NULL,
+                batch_no TEXT NOT NULL DEFAULT '',
                 expiry_date TEXT NOT NULL,
                 quantity INTEGER NOT NULL DEFAULT 0 CHECK(quantity >= 0),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(product_id, expiry_date),
+                UNIQUE(product_id, batch_no, expiry_date),
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             );
         """)
+        # Migration៖ DB ចាស់ដែលគ្មាន batch_no -> បង្កើតតារាងថ្មី និងចម្លងទិន្នន័យ
+        cursor.execute("PRAGMA table_info(product_batches);")
+        batch_columns = [row['name'] for row in cursor.fetchall()]
+        if 'batch_no' not in batch_columns:
+            cursor.execute("ALTER TABLE product_batches RENAME TO product_batches_old;")
+            cursor.execute("""
+                CREATE TABLE product_batches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER NOT NULL,
+                    batch_no TEXT NOT NULL DEFAULT '',
+                    expiry_date TEXT NOT NULL,
+                    quantity INTEGER NOT NULL DEFAULT 0 CHECK(quantity >= 0),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(product_id, batch_no, expiry_date),
+                    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+                );
+            """)
+            cursor.execute("""
+                INSERT INTO product_batches (id, product_id, batch_no, expiry_date, quantity, created_at, updated_at)
+                SELECT id, product_id, '', expiry_date, quantity, created_at, updated_at FROM product_batches_old;
+            """)
+            cursor.execute("DROP TABLE product_batches_old;")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_batches_product ON product_batches(product_id);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_batches_expiry ON product_batches(expiry_date);")
 
-        # បន្ថែម column batch_id / expiry_date លើ transactions (សម្រាប់ DB ចាស់)
+        # បន្ថែម column batch_id / expiry_date / batch_no លើ transactions (សម្រាប់ DB ចាស់)
         cursor.execute("PRAGMA table_info(transactions);")
         tx_columns = [row['name'] for row in cursor.fetchall()]
         if 'batch_id' not in tx_columns:
             cursor.execute("ALTER TABLE transactions ADD COLUMN batch_id INTEGER;")
         if 'expiry_date' not in tx_columns:
             cursor.execute("ALTER TABLE transactions ADD COLUMN expiry_date TEXT;")
+        if 'batch_no' not in tx_columns:
+            cursor.execute("ALTER TABLE transactions ADD COLUMN batch_no TEXT;")
 
         # ពិនិត្យបន្ថែម password_hash column លើ users
         cursor.execute("PRAGMA table_info(users);")
@@ -348,11 +374,21 @@ def normalize_expiry_date(value: Optional[Any]) -> Optional[str]:
     raise ValueError(f"ទម្រង់ថ្ងៃផុតកំណត់ '{text}' មិនត្រឹមត្រូវ (សូមប្រើ YYYY-MM-DD)")
 
 
-def _upsert_batch(cursor: sqlite3.Cursor, product_id: int, expiry_date: str, quantity: int) -> int:
-    """បន្ថែមចំនួនចូលឡូតិ៍ដែលមានថ្ងៃផុតកំណត់ដូចគ្នា ឬបង្កើតឡូតិ៍ថ្មី; ត្រឡប់ batch_id"""
+def normalize_batch_no(value: Optional[Any]) -> str:
+    """សម្អាតលេខឡូតិ៍ (Batch/Lot No.) - ត្រឡប់ '' បើគ្មាន"""
+    if value is None:
+        return ''
+    text = str(value).strip()
+    if text.lower() in ('-', 'none', 'null', 'n/a'):
+        return ''
+    return text[:64]
+
+
+def _upsert_batch(cursor: sqlite3.Cursor, product_id: int, expiry_date: str, quantity: int, batch_no: str = '') -> int:
+    """បន្ថែមចំនួនចូលឡូតិ៍ដែលមានលេខឡូតិ៍ + ថ្ងៃផុតកំណត់ដូចគ្នា ឬបង្កើតឡូតិ៍ថ្មី; ត្រឡប់ batch_id"""
     cursor.execute(
-        "SELECT id FROM product_batches WHERE product_id = ? AND expiry_date = ?",
-        (product_id, expiry_date)
+        "SELECT id FROM product_batches WHERE product_id = ? AND batch_no = ? AND expiry_date = ?",
+        (product_id, batch_no, expiry_date)
     )
     row = cursor.fetchone()
     if row:
@@ -363,9 +399,9 @@ def _upsert_batch(cursor: sqlite3.Cursor, product_id: int, expiry_date: str, qua
         """, (quantity, row['id']))
         return row['id']
     cursor.execute("""
-        INSERT INTO product_batches (product_id, expiry_date, quantity)
-        VALUES (?, ?, ?);
-    """, (product_id, expiry_date, quantity))
+        INSERT INTO product_batches (product_id, batch_no, expiry_date, quantity, created_at, updated_at)
+        VALUES (?, ?, ?, ?, datetime('now','localtime'), datetime('now','localtime'));
+    """, (product_id, batch_no, expiry_date, quantity))
     return cursor.lastrowid
 
 
@@ -374,14 +410,14 @@ def _deduct_from_batches(
     product_id: int,
     quantity: int,
     batch_id: Optional[int] = None
-) -> Tuple[bool, str, List[Tuple[int, str, int]]]:
+) -> Tuple[bool, str, List[Tuple[int, str, int, str]]]:
     """
     កាត់ចំនួនចេញពីឡូតិ៍។
     - batch_id ជាក់លាក់៖ កាត់ចេញពីឡូតិ៍នោះតែម្តង (ត្រូវមានចំនួនគ្រប់)
     - គ្មាន batch_id៖ FEFO (First-Expire-First-Out) កាត់ពីឡូតិ៍ដែលផុតកំណត់មុនគេជាមុន
-    ត្រឡប់ list នៃ (batch_id, expiry_date, qty_deducted)
+    ត្រឡប់ list នៃ (batch_id, expiry_date, qty_deducted, batch_no)
     """
-    deducted: List[Tuple[int, str, int]] = []
+    deducted: List[Tuple[int, str, int, str]] = []
     if batch_id is not None:
         cursor.execute(
             "SELECT * FROM product_batches WHERE id = ? AND product_id = ?",
@@ -395,7 +431,7 @@ def _deduct_from_batches(
         cursor.execute("""
             UPDATE product_batches SET quantity = quantity - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
         """, (quantity, batch_id))
-        deducted.append((b['id'], b['expiry_date'], quantity))
+        deducted.append((b['id'], b['expiry_date'], quantity, b['batch_no']))
         return True, "", deducted
 
     remaining = quantity
@@ -411,7 +447,7 @@ def _deduct_from_batches(
         cursor.execute("""
             UPDATE product_batches SET quantity = quantity - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
         """, (take, b['id']))
-        deducted.append((b['id'], b['expiry_date'], take))
+        deducted.append((b['id'], b['expiry_date'], take, b['batch_no']))
         remaining -= take
     # ចំនួនដែលនៅសល់ (remaining > 0) គឺជាស្តុកដែលមិនមានថ្ងៃផុតកំណត់
     return True, "", deducted
@@ -423,9 +459,10 @@ def record_stock_in(
     unit_price: float,
     reference: str,
     user_id: int,
-    expiry_date: Optional[str] = None
+    expiry_date: Optional[str] = None,
+    batch_no: Optional[str] = None
 ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
-    """នាំចូលទំនិញ (Stock In) - អាចភ្ជាប់ថ្ងៃផុតកំណត់ (បង្កើតជាឡូតិ៍)"""
+    """នាំចូលទំនិញ (Stock In) - អាចភ្ជាប់លេខឡូតិ៍ + ថ្ងៃផុតកំណត់ (បង្កើតជាឡូតិ៍)"""
     if quantity <= 0:
         return False, "ចំនួននាំចូលត្រូវតែធំជាង ០!", None
 
@@ -433,6 +470,9 @@ def record_stock_in(
         expiry_date = normalize_expiry_date(expiry_date)
     except ValueError as e:
         return False, str(e), None
+    batch_no = normalize_batch_no(batch_no)
+    if batch_no and not expiry_date:
+        return False, "បើមានលេខឡូតិ៍ ត្រូវបញ្ចូលថ្ងៃផុតកំណត់ផងដែរ!", None
 
     total_price = round(quantity * unit_price, 2)
 
@@ -456,13 +496,13 @@ def record_stock_in(
 
         batch_id = None
         if expiry_date:
-            batch_id = _upsert_batch(cursor, product_id, expiry_date, quantity)
+            batch_id = _upsert_batch(cursor, product_id, expiry_date, quantity, batch_no)
 
         # កត់ត្រាចូល transactions
         cursor.execute("""
-            INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date)
-            VALUES (?, 'IN', ?, ?, ?, ?, ?, ?, ?);
-        """, (product_id, quantity, unit_price, total_price, reference, user_id, batch_id, expiry_date))
+            INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date, batch_no, created_at)
+            VALUES (?, 'IN', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'));
+        """, (product_id, quantity, unit_price, total_price, reference, user_id, batch_id, expiry_date, batch_no or None))
 
         conn.commit()
 
@@ -470,6 +510,7 @@ def record_stock_in(
         cursor.execute("SELECT * FROM products WHERE id = ?", (product_id,))
         updated_prod = dict(cursor.fetchone())
         updated_prod['expiry_date'] = expiry_date
+        updated_prod['batch_no'] = batch_no
         return True, "នាំចូលទំនិញជោគជ័យ!", updated_prod
 
 
@@ -514,22 +555,22 @@ def record_stock_out(
         """, (new_qty, product_id))
 
         # កត់ត្រាចូល transactions (១ ជួរក្នុង ១ ឡូតិ៍ ដើម្បីតាមដានថ្ងៃផុតកំណត់បានច្បាស់)
-        tracked = sum(q for _, _, q in deducted)
-        rows = [(b_id, exp, q) for b_id, exp, q in deducted]
+        tracked = sum(q for _, _, q, _ in deducted)
+        rows = [(b_id, exp, q, bno) for b_id, exp, q, bno in deducted]
         if quantity - tracked > 0:
-            rows.append((None, None, quantity - tracked))
-        for b_id, exp, q in rows:
+            rows.append((None, None, quantity - tracked, ''))
+        for b_id, exp, q, bno in rows:
             cursor.execute("""
-                INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date)
-                VALUES (?, 'OUT', ?, ?, ?, ?, ?, ?, ?);
-            """, (product_id, q, price, round(q * price, 2), reference, user_id, b_id, exp))
+                INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date, batch_no, created_at)
+                VALUES (?, 'OUT', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'));
+            """, (product_id, q, price, round(q * price, 2), reference, user_id, b_id, exp, bno or None))
 
         conn.commit()
 
         cursor.execute("SELECT * FROM products WHERE id = ?", (product_id,))
         updated_prod = dict(cursor.fetchone())
         updated_prod['batches_deducted'] = [
-            {"batch_id": b_id, "expiry_date": exp, "quantity": q} for b_id, exp, q in deducted
+            {"batch_id": b_id, "expiry_date": exp, "quantity": q, "batch_no": bno} for b_id, exp, q, bno in deducted
         ]
         return True, "កាត់ស្តុកជោគជ័យ!", updated_prod
 
@@ -791,8 +832,8 @@ def adjust_product_quantity(product_id: int, new_quantity: int, reason: str, use
         # កត់ត្រាជា Transaction កែតម្រូវ
         tx_type = 'IN' if diff > 0 else 'OUT'
         cursor.execute("""
-            INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by)
-            VALUES (?, ?, ?, 0.0, 0.0, ?, ?);
+            INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, created_at)
+            VALUES (?, ?, ?, 0.0, 0.0, ?, ?, datetime('now','localtime'));
         """, (product_id, tx_type, abs(diff), f"កែតម្រូវស្តុក ({old_qty} ទៅ {new_quantity}): {reason}", user_id))
 
         conn.commit()
@@ -991,8 +1032,8 @@ def get_expiry_calendar(year: int, month: int) -> Dict[str, Dict[str, Any]]:
 
 
 def update_batch(batch_id: int, expiry_date: Optional[str] = None, quantity: Optional[int] = None,
-                 user_id: Optional[int] = None) -> Tuple[bool, str]:
-    """កែប្រែថ្ងៃផុតកំណត់ ឬចំនួនរបស់ឡូតិ៍ (ការកែចំនួន នឹងកែស្តុកសរុបរបស់ទំនិញដែរ)"""
+                 user_id: Optional[int] = None, batch_no: Optional[str] = None) -> Tuple[bool, str]:
+    """កែប្រែលេខឡូតិ៍ / ថ្ងៃផុតកំណត់ / ចំនួនរបស់ឡូតិ៍ (ការកែចំនួន នឹងកែស្តុកសរុបរបស់ទំនិញដែរ)"""
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM product_batches WHERE id = ?", (batch_id,))
@@ -1000,6 +1041,7 @@ def update_batch(batch_id: int, expiry_date: Optional[str] = None, quantity: Opt
         if not b:
             return False, "រកមិនឃើញឡូតិ៍នេះទេ!"
 
+        new_exp = b['expiry_date']
         if expiry_date is not None:
             try:
                 new_exp = normalize_expiry_date(expiry_date)
@@ -1007,28 +1049,31 @@ def update_batch(batch_id: int, expiry_date: Optional[str] = None, quantity: Opt
                 return False, str(e)
             if not new_exp:
                 return False, "ថ្ងៃផុតកំណត់មិនអាចទទេបានទេ!"
-            if new_exp != b['expiry_date']:
-                # បើមានឡូតិ៍ថ្ងៃដូចគ្នាស្រាប់ ត្រូវបញ្ចូលគ្នា
+        new_bno = b['batch_no'] if batch_no is None else normalize_batch_no(batch_no)
+
+        if new_exp != b['expiry_date'] or new_bno != b['batch_no']:
+            # បើមានឡូតិ៍ (លេខ + ថ្ងៃ) ដូចគ្នាស្រាប់ ត្រូវបញ្ចូលគ្នា
+            cursor.execute(
+                "SELECT id FROM product_batches WHERE product_id = ? AND batch_no = ? AND expiry_date = ? AND id != ?",
+                (b['product_id'], new_bno, new_exp, batch_id)
+            )
+            dup = cursor.fetchone()
+            if dup:
                 cursor.execute(
-                    "SELECT id FROM product_batches WHERE product_id = ? AND expiry_date = ? AND id != ?",
-                    (b['product_id'], new_exp, batch_id)
+                    "UPDATE product_batches SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (b['quantity'], dup['id'])
                 )
-                dup = cursor.fetchone()
-                if dup:
-                    cursor.execute(
-                        "UPDATE product_batches SET quantity = quantity + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                        (b['quantity'], dup['id'])
-                    )
-                    cursor.execute("UPDATE transactions SET batch_id = ?, expiry_date = ? WHERE batch_id = ?",
-                                   (dup['id'], new_exp, batch_id))
-                    cursor.execute("DELETE FROM product_batches WHERE id = ?", (batch_id,))
-                    conn.commit()
-                    return True, f"បានបញ្ចូលឡូតិ៍ចូលគ្នាជាមួយថ្ងៃ {new_exp}!"
-                cursor.execute(
-                    "UPDATE product_batches SET expiry_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    (new_exp, batch_id)
-                )
-                cursor.execute("UPDATE transactions SET expiry_date = ? WHERE batch_id = ?", (new_exp, batch_id))
+                cursor.execute("UPDATE transactions SET batch_id = ?, expiry_date = ?, batch_no = ? WHERE batch_id = ?",
+                               (dup['id'], new_exp, new_bno or None, batch_id))
+                cursor.execute("DELETE FROM product_batches WHERE id = ?", (batch_id,))
+                conn.commit()
+                return True, f"បានបញ្ចូលឡូតិ៍ចូលគ្នាជាមួយឡូតិ៍ {new_bno or ''} {new_exp}!"
+            cursor.execute(
+                "UPDATE product_batches SET expiry_date = ?, batch_no = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_exp, new_bno, batch_id)
+            )
+            cursor.execute("UPDATE transactions SET expiry_date = ?, batch_no = ? WHERE batch_id = ?",
+                           (new_exp, new_bno or None, batch_id))
 
         if quantity is not None:
             if quantity < 0:
@@ -1045,10 +1090,10 @@ def update_batch(batch_id: int, expiry_date: Optional[str] = None, quantity: Opt
                 )
                 tx_type = 'IN' if diff > 0 else 'OUT'
                 cursor.execute("""
-                    INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date)
-                    VALUES (?, ?, ?, 0.0, 0.0, ?, ?, ?, ?);
+                    INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date, batch_no, created_at)
+                    VALUES (?, ?, ?, 0.0, 0.0, ?, ?, ?, ?, ?, datetime('now','localtime'));
                 """, (b['product_id'], tx_type, abs(diff),
-                      f"កែតម្រូវឡូតិ៍ ({b['quantity']} ទៅ {quantity})", user_id or 0, batch_id, b['expiry_date']))
+                      f"កែតម្រូវឡូតិ៍ ({b['quantity']} ទៅ {quantity})", user_id or 0, batch_id, new_exp, new_bno or None))
 
         conn.commit()
         return True, "បានកែប្រែឡូតិ៍ជោគជ័យ!"
@@ -1069,13 +1114,13 @@ def delete_batch(batch_id: int, user_id: Optional[int] = None, reason: str = "�
                 (qty, b['product_id'])
             )
             cursor.execute("""
-                INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date)
-                VALUES (?, 'OUT', ?, 0.0, 0.0, ?, ?, NULL, ?);
-            """, (b['product_id'], qty, reason, user_id or 0, b['expiry_date']))
+                INSERT INTO transactions (product_id, type, quantity, unit_price, total_price, reference, performed_by, batch_id, expiry_date, batch_no, created_at)
+                VALUES (?, 'OUT', ?, 0.0, 0.0, ?, ?, NULL, ?, ?, datetime('now','localtime'));
+            """, (b['product_id'], qty, reason, user_id or 0, b['expiry_date'], b['batch_no'] or None))
         cursor.execute("UPDATE transactions SET batch_id = NULL WHERE batch_id = ?", (batch_id,))
         cursor.execute("DELETE FROM product_batches WHERE id = ?", (batch_id,))
         conn.commit()
-        return True, f"បានលុបឡូតិ៍ផុតកំណត់ {b['expiry_date']} (-{qty}) ជោគជ័យ!"
+        return True, f"បានលុបឡូតិ៍ {b['batch_no'] or ''} ផុតកំណត់ {b['expiry_date']} (-{qty}) ជោគជ័យ!"
 
 
 # ==========================================
@@ -1092,6 +1137,7 @@ IMPORT_COLUMNS = [
     ("quantity", ["quantity", "qty", "stock", "ចំនួន", "ចំនួនស្តុក"]),
     ("min_quantity", ["min_quantity", "min_qty", "min", "reorder", "កម្រិតជូនដំណឹង"]),
     ("location", ["location", "loc", "shelf", "ទីតាំង"]),
+    ("batch_no", ["batch_no", "batch", "batch_number", "lot", "lot_no", "lot_number", "លេខឡូតិ៍", "ឡូតិ៍"]),
     ("expiry_date", ["expiry_date", "expiry", "expire", "exp", "expiration", "best_before", "ផុតកំណត់", "ថ្ងៃផុតកំណត់"]),
     ("reference", ["reference", "ref", "note", "supplier", "កំណត់ចំណាំ", "អ្នកផ្គត់ផ្គង់"]),
 ]
@@ -1160,6 +1206,7 @@ def import_products_rows(
             if qty < 0:
                 raise ValueError("ចំនួន (quantity) មិនអាចអវិជ្ជមាន")
             expiry = normalize_expiry_date(r.get('expiry_date'))
+            batch_no = normalize_batch_no(r.get('batch_no'))
             cost = _to_float(r.get('cost_price'), 0.0)
             sell = _to_float(r.get('sell_price'), 0.0)
             row_ref = str(r.get('reference') or '').strip() or reference
@@ -1199,7 +1246,7 @@ def import_products_rows(
             if qty > 0 and product_id:
                 ok, msg, _ = record_stock_in(
                     product_id=product_id, quantity=qty, unit_price=cost,
-                    reference=row_ref, user_id=user_id, expiry_date=expiry
+                    reference=row_ref, user_id=user_id, expiry_date=expiry, batch_no=batch_no
                 )
                 if not ok:
                     raise ValueError(msg)
@@ -1218,13 +1265,13 @@ def generate_import_sample_rows() -> List[List[Any]]:
     today = datetime.date.today()
     d = lambda days: (today + datetime.timedelta(days=days)).isoformat()
     headers = ["code", "name", "category", "unit", "cost_price", "sell_price",
-               "quantity", "min_quantity", "location", "expiry_date", "reference"]
+               "quantity", "min_quantity", "location", "batch_no", "expiry_date", "reference"]
     rows = [
-        ["MED-001", "Paracetamol 500mg", "ថ្នាំពេទ្យ", "ប្រអប់", 1.20, 2.00, 50, 10, "ទូ A", d(90), "ក្រុមហ៊ុន A - Inv#1001"],
-        ["MED-001", "Paracetamol 500mg", "ថ្នាំពេទ្យ", "ប្រអប់", 1.20, 2.00, 30, 10, "ទូ A", d(240), "ក្រុមហ៊ុន A - Inv#1002"],
-        ["MED-001", "Paracetamol 500mg", "ថ្នាំពេទ្យ", "ប្រអប់", 1.20, 2.00, 20, 10, "ទូ A", d(400), "ក្រុមហ៊ុន A - Inv#1003"],
-        ["DRK-010", "Coca-Cola 330ml", "ភេសជ្ជៈ", "កំប៉ុង", 0.35, 0.60, 120, 24, "ធ្នើរទី២", d(180), "ដឹកជញ្ជូនលើកទី១"],
-        ["DRK-010", "Coca-Cola 330ml", "ភេសជ្ជៈ", "កំប៉ុង", 0.35, 0.60, 48, 24, "ធ្នើរទី២", d(15), "ស្តុកចាស់ ជិតផុតកំណត់"],
-        ["EQP-200", "ដបទឹកកែវ 1L", "ឧបករណ៍", "ដប", 2.50, 4.00, 10, 3, "ឃ្លាំងធំ", "", "គ្មានថ្ងៃផុតកំណត់"],
+        ["MED-001", "Paracetamol 500mg", "ថ្នាំពេទ្យ", "ប្រអប់", 1.20, 2.00, 50, 10, "ទូ A", "LOT-A101", d(90), "ក្រុមហ៊ុន A - Inv#1001"],
+        ["MED-001", "Paracetamol 500mg", "ថ្នាំពេទ្យ", "ប្រអប់", 1.20, 2.00, 30, 10, "ទូ A", "LOT-A102", d(240), "ក្រុមហ៊ុន A - Inv#1002"],
+        ["MED-001", "Paracetamol 500mg", "ថ្នាំពេទ្យ", "ប្រអប់", 1.20, 2.00, 20, 10, "ទូ A", "LOT-A103", d(400), "ក្រុមហ៊ុន A - Inv#1003"],
+        ["DRK-010", "Coca-Cola 330ml", "ភេសជ្ជៈ", "កំប៉ុង", 0.35, 0.60, 120, 24, "ធ្នើរទី២", "B2026-07", d(180), "ដឹកជញ្ជូនលើកទី១"],
+        ["DRK-010", "Coca-Cola 330ml", "ភេសជ្ជៈ", "កំប៉ុង", 0.35, 0.60, 48, 24, "ធ្នើរទី២", "B2026-01", d(15), "ស្តុកចាស់ ជិតផុតកំណត់"],
+        ["EQP-200", "ដបទឹកកែវ 1L", "ឧបករណ៍", "ដប", 2.50, 4.00, 10, 3, "ឃ្លាំងធំ", "", "", "គ្មានថ្ងៃផុតកំណត់"],
     ]
     return [headers] + rows

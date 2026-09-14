@@ -19,6 +19,32 @@ if _admin_raw:
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "inventory.db"))
 
+
+def _prepare_database_path() -> None:
+    """
+    រៀបចំផ្លូវ Database សម្រាប់ Persistent Disk (ឧ. Render: DATABASE_PATH=/data/inventory.db)
+    - បង្កើត folder បើមិនទាន់មាន
+    - បើ Database លើ disk មិនទាន់មាន តែមាន inventory.db ក្នុង repo -> ចម្លងជា seed លើកដំបូង
+    """
+    import shutil
+    db_path = Path(DATABASE_PATH)
+    if not db_path.is_absolute():
+        db_path = BASE_DIR / db_path
+    try:
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        return
+    seed = BASE_DIR / "inventory.db"
+    if not db_path.exists() and seed.exists() and seed.resolve() != db_path.resolve():
+        try:
+            shutil.copy2(seed, db_path)
+            print(f"📦 Seeded database from repo to {db_path}")
+        except Exception as e:
+            print(f"⚠️ Could not seed database: {e}")
+
+
+_prepare_database_path()
+
 # Telegram Group ឬ Channel ID សម្រាប់ទទួលការជូនដំណឹង (ឧ. -100xxxx ឬ @channel)
 ALERT_CHAT_ID = os.getenv("TELEGRAM_ALERT_CHAT_ID", "").strip()
 

@@ -105,3 +105,14 @@ d:/Telegrambot inventory system SM/
 ├── .env.example              # គំរូឯកសារបរិស្ថាន
 └── README.md                 # សៀវភៅណែនាំ
 ```
+
+## ☁️ រក្សាទុកទិន្នន័យអចិន្ត្រៃយ៍លើ Render (Persistent Disk)
+
+Container លើ Render ត្រូវបាន rebuild រាល់ពេល deploy ដូច្នេះ SQLite ក្នុង container នឹងបាត់។ ដើម្បីរក្សាទុក៖
+
+1. Render Dashboard → service → **Disks** → **Add Disk**
+   - Name: `inventory-data`, Mount Path: `/data`, Size: `1 GB` (ត្រូវការ plan Starter ឡើងទៅ)
+2. **Environment** → Add: `DATABASE_PATH` = `/data/inventory.db`
+3. **Manual Deploy → Deploy latest commit**
+
+លើកដំបូង ប្រព័ន្ធនឹងចម្លង `inventory.db` ពី repo ទៅ `/data/` ដោយស្វ័យប្រវត្តិ (seed) បន្ទាប់មកទិន្នន័យទាំងអស់នឹងរក្សាទុកនៅលើ disk ជាអចិន្ត្រៃយ៍។

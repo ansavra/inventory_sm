@@ -1,0 +1,21 @@
+# Render Blueprint (ស្រេចចិត្ត) — ប្រើបើបង្កើត service ថ្មីតាម "New > Blueprint"
+# បើ service មានស្រាប់ សូមកំណត់ Disk និង Env Var ដោយដៃតាម Dashboard (មើល README)
+services:
+  - type: web
+    name: inventory-sm
+    runtime: docker
+    plan: starter        # Persistent Disk ត្រូវការ plan ដែលបង់ប្រាក់ (Free plan គ្មាន disk)
+    autoDeploy: true
+    disk:
+      name: inventory-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_PATH
+        value: /data/inventory.db
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: TELEGRAM_ALERT_CHAT_ID
+        sync: false

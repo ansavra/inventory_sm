@@ -12,6 +12,8 @@ tunnel_url.txt
 
 # Python cache
 __pycache__/
+logs/
+.sm_pids
 *.pyc
 *.pyo
 *.pyd

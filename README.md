@@ -116,3 +116,15 @@ Container លើ Render ត្រូវបាន rebuild រាល់ពេល d
 3. **Manual Deploy → Deploy latest commit**
 
 លើកដំបូង ប្រព័ន្ធនឹងចម្លង `inventory.db` ពី repo ទៅ `/data/` ដោយស្វ័យប្រវត្តិ (seed) បន្ទាប់មកទិន្នន័យទាំងអស់នឹងរក្សាទុកនៅលើ disk ជាអចិន្ត្រៃយ៍។
+
+## 🚀 បើកកម្មវិធីដោយមិនបង្ហាញផ្ទាំង CMD (Hidden Mode)
+
+| ឯកសារ | មុខងារ |
+|---|---|
+| `START_LOCAL_HIDDEN.vbs` | បើក Web Dashboard + Telegram Bot ក្នុង Local/Wi-Fi ដោយលាក់ផ្ទាំង CMD (browser បើកដោយស្វ័យប្រវត្តិ) |
+| `START_SYSTEM_HIDDEN.vbs` | ដូចខាងលើ បូក Cloudflare Tunnel (Internet) |
+| `STOP_SYSTEM.bat` | បិទប្រព័ន្ធទាំងអស់ (Web + Bot + Tunnel) |
+| `run.bat` / `START_SYSTEM.bat` | របៀបចាស់ — បង្ហាញផ្ទាំង CMD (ចុច Ctrl+C ដើម្បីបិទ) |
+
+ក្នុង Hidden mode, output ទាំងអស់ត្រូវសរសេរទៅ `logs/web.log` និង `logs/bot.log`។
+💡 ចង់ឱ្យបើកដោយស្វ័យប្រវត្តិពេលបើកកុំព្យូទ័រ៖ ចុចស្តាំលើ `START_LOCAL_HIDDEN.vbs` → Create shortcut → ដាក់ shortcut ចូល folder `shell:startup`។

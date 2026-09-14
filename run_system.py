@@ -21,6 +21,46 @@ PYTHON_EXE = str(BASE_DIR / ".venv" / "Scripts" / "python.exe")
 if not os.path.exists(PYTHON_EXE):
     PYTHON_EXE = sys.executable
 
+# ---- Hidden mode (គ្មានផ្ទាំង CMD) ----
+# ដំណើរការតាម pythonw.exe ឬ START_*_HIDDEN.vbs -> កូនដំណើរការទាំងអស់លាក់ផ្ទាំង និងសរសេរ log ទៅ logs/
+HIDDEN_MODE = (
+    os.environ.get("SM_HIDDEN") == "1"
+    or os.path.basename(sys.executable).lower() == "pythonw.exe"
+)
+LOG_DIR = BASE_DIR / "logs"
+PID_FILE = BASE_DIR / ".sm_pids"
+
+
+def child_kwargs(log_name: str) -> dict:
+    """Popen kwargs៖ ក្នុង Hidden mode លាក់ console របស់កូនដំណើរការ និងបញ្ជូន output ទៅ log file"""
+    kw = {}
+    if HIDDEN_MODE:
+        LOG_DIR.mkdir(exist_ok=True)
+        log_f = open(LOG_DIR / f"{log_name}.log", "a", encoding="utf-8", errors="replace")
+        kw["stdout"] = log_f
+        kw["stderr"] = subprocess.STDOUT
+        kw["stdin"] = subprocess.DEVNULL
+        if sys.platform == "win32":
+            kw["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return kw
+
+
+def write_pid_file():
+    """រក្សាទុក PID ទាំងអស់ ដើម្បីឱ្យ STOP_SYSTEM.bat បិទបាន"""
+    try:
+        pids = [str(os.getpid())] + [str(p.pid) for p in processes.values()]
+        PID_FILE.write_text("\n".join(pids), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def remove_pid_file():
+    try:
+        if PID_FILE.exists():
+            PID_FILE.unlink()
+    except Exception:
+        pass
+
 CLOUDFLARED_EXE = str(BASE_DIR / "cloudflared.exe")
 TUNNEL_FILE = BASE_DIR / "tunnel_url.txt"
 
@@ -39,6 +79,7 @@ def cleanup():
             p.kill()
         except Exception:
             pass
+    remove_pid_file()
     print("✅ បានបិទរួចរាល់។")
 
 def wait_for_web(port=8000, timeout=15):
@@ -60,15 +101,21 @@ def start_cloudflared_and_get_url():
         return None
 
     cmd = [CLOUDFLARED_EXE, "tunnel", "--url", "http://127.0.0.1:8000"]
+    cf_kw = {}
+    if HIDDEN_MODE and sys.platform == "win32":
+        cf_kw["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
         text=True,
         encoding="utf-8",
-        errors="replace"
+        errors="replace",
+        **cf_kw
     )
     processes["cloudflared"] = proc
+    write_pid_file()
 
     tunnel_url = None
     url_pattern = re.compile(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com")
@@ -104,9 +151,11 @@ def main():
         print("▶️ [1/3] កំពុងដំណើរការ Web Dashboard (FastAPI / Uvicorn)...")
         web_proc = subprocess.Popen(
             [PYTHON_EXE, "-m", "uvicorn", "web_app:app", "--host", "0.0.0.0", "--port", "8000"],
-            cwd=str(BASE_DIR)
+            cwd=str(BASE_DIR),
+            **child_kwargs("web")
         )
         processes["web_app"] = web_proc
+        write_pid_file()
 
         if not wait_for_web(8000, timeout=12):
             print("⚠️ Web Dashboard កំពុងរៀបចំ...")
@@ -131,9 +180,11 @@ def main():
         print("▶️ [3/3] កំពុងដំណើរការ Telegram Bot (main.py)...")
         bot_proc = subprocess.Popen(
             [PYTHON_EXE, "main.py"],
-            cwd=str(BASE_DIR)
+            cwd=str(BASE_DIR),
+            **child_kwargs("bot")
         )
         processes["telegram_bot"] = bot_proc
+        write_pid_file()
 
         # Success Banner
         login_url = f"{tunnel_url}/login"

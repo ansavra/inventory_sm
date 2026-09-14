@@ -678,3 +678,206 @@ body {
     background: rgba(255, 255, 255, 0.08);
 }
 
+
+/* ==========================================
+   Expiry / Calendar / Filters / Import
+   ========================================== */
+.icon-rose { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25); }
+.stat-card-clickable { cursor: pointer; }
+
+.badge-muted {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.expiry-cell { cursor: pointer; white-space: nowrap; }
+.expiry-cell:hover .badge { filter: brightness(1.2); }
+.expiry-more { font-size: 0.72rem; color: var(--text-muted); margin-left: 0.25rem; }
+
+/* Filter bar (transactions / expiry) */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 140px;
+}
+
+.filter-field label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.filter-field input,
+.filter-field select,
+.modal-body select {
+    background: rgba(17, 24, 39, 0.8);
+    border: 1px solid var(--border-color);
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 0.86rem;
+    outline: none;
+    width: 100%;
+}
+
+.filter-field input:focus,
+.filter-field select:focus,
+.modal-body select:focus {
+    border-color: var(--accent-primary);
+}
+
+input[type="date"] { color-scheme: dark; }
+
+.filter-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.filter-quick .btn.active {
+    background: rgba(99, 102, 241, 0.25);
+    color: #c7d2fe;
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.summary-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin-bottom: 0.9rem;
+}
+
+.summary-strip .badge { font-size: 0.82rem; padding: 0.4rem 0.8rem; }
+
+/* Calendar */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.4rem;
+}
+
+.cal-head {
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 0.4rem 0;
+}
+
+.cal-day {
+    min-height: 88px;
+    background: rgba(17, 24, 39, 0.7);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+}
+
+.cal-day:hover { border-color: var(--border-color-hover); background: var(--bg-card-hover); }
+.cal-day.empty { background: transparent; border-color: transparent; cursor: default; }
+.cal-day.today { border-color: #6366f1; box-shadow: inset 0 0 0 1px #6366f1; }
+.cal-day.has-expiry { border-color: rgba(244, 63, 94, 0.5); }
+.cal-day .cal-num { font-weight: 700; font-size: 0.85rem; color: var(--text-primary); }
+.cal-day.today .cal-num { color: #a5b4fc; }
+.cal-in { color: #34d399; }
+.cal-out { color: #fbbf24; }
+.cal-exp { color: #fb7185; }
+
+/* Batches modal */
+.batch-hint {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin: -0.4rem 0 0.9rem 0;
+    line-height: 1.6;
+}
+.batch-hint .badge { margin-right: 0.25rem; }
+
+.batch-add-form {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border-color);
+}
+
+.batch-edit-input {
+    background: rgba(17, 24, 39, 0.8);
+    border: 1px solid var(--border-color);
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 0.8rem;
+}
+
+/* Import modal */
+.import-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.import-step {
+    background: rgba(17, 24, 39, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.9rem 1rem;
+}
+.import-step code {
+    font-size: 0.72rem;
+    color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 0.05rem 0.3rem;
+    border-radius: 4px;
+}
+.import-step input[type="file"] {
+    width: 100%;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.checkbox-label input { width: auto; accent-color: #6366f1; }
+
+.import-preview, .import-result {
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.9rem 1rem;
+    background: rgba(17, 24, 39, 0.6);
+    font-size: 0.82rem;
+    max-height: 280px;
+    overflow: auto;
+}
+.import-preview table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.import-preview th, .import-preview td { padding: 0.3rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: left; white-space: nowrap; }
+.import-preview th { color: var(--text-secondary); }
+.import-result ul { margin: 0.4rem 0 0 1.2rem; }
+.import-result .err { color: #f87171; }
+
+@media (max-width: 720px) {
+    .import-steps { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .cal-day { min-height: 64px; font-size: 0.68rem; }
+}

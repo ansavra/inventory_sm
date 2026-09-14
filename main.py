@@ -41,9 +41,11 @@ from handlers.stock_in import (
     stock_in_price_received,
     stock_in_finish,
     stock_in_from_callback,
+    stock_in_expiry_received,
     IN_SELECT_PRODUCT,
     IN_QUANTITY,
     IN_PRICE,
+    IN_EXPIRY,
     IN_REFERENCE
 )
 from handlers.stock_out import (
@@ -219,6 +221,9 @@ def main():
             ],
             IN_PRICE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND & ~cancel_filter, stock_in_price_received)
+            ],
+            IN_EXPIRY: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND & ~cancel_filter, stock_in_expiry_received)
             ],
             IN_REFERENCE: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND & ~cancel_filter, stock_in_finish)

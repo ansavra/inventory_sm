@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 import database as db
 import keyboards as kb
 
-IN_SELECT_PRODUCT, IN_QUANTITY, IN_PRICE, IN_REFERENCE = range(4)
+IN_SELECT_PRODUCT, IN_QUANTITY, IN_PRICE, IN_EXPIRY, IN_REFERENCE = range(5)
 
 
 async def stock_in_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -85,6 +85,40 @@ async def stock_in_price_received(update: Update, context: ContextTypes.DEFAULT_
 
     context.user_data['stock_in_price'] = price
 
+    # បង្ហាញឡូតិ៍ដែលមានស្រាប់ ដើម្បីងាយស្រួលជ្រើសរើស
+    batches = db.get_product_batches(context.user_data['stock_in_product_id'])
+    batch_text = ""
+    if batches:
+        batch_text = "\n📋 ឡូតិ៍ដែលមានស្រាប់៖\n" + "\n".join(
+            f"  • `{b['expiry_date']}` — សល់ {b['quantity']}" for b in batches[:8]
+        ) + "\n"
+
+    await update.message.reply_text(
+        "⏰ សូមបញ្ចូល **ថ្ងៃផុតកំណត់ (Expiry Date)** របស់ទំនិញដែលនាំចូលលើកនេះ៖\n"
+        "(ទម្រង់៖ `2026-12-31` ឬ `31/12/2026` — ឬវាយ `-` បើគ្មានថ្ងៃផុតកំណត់)\n"
+        f"{batch_text}"
+        "💡 ទំនិញ ១ អាចមានថ្ងៃផុតកំណត់ច្រើន៖ ថ្ងៃថ្មី = ឡូតិ៍ថ្មី, ថ្ងៃដូចឡូតិ៍ស្រាប់ = បូកបញ្ចូលគ្នា។",
+        reply_markup=kb.get_cancel_keyboard(),
+        parse_mode="Markdown"
+    )
+    return IN_EXPIRY
+
+
+async def stock_in_expiry_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ទទួលថ្ងៃផុតកំណត់ (ឬ - បើគ្មាន)"""
+    text = update.message.text.strip()
+    try:
+        expiry = db.normalize_expiry_date(text)
+    except ValueError:
+        await update.message.reply_text(
+            "⚠️ ទម្រង់ថ្ងៃមិនត្រឹមត្រូវ! សូមវាយជា `2026-12-31` ឬ `31/12/2026` ឬ `-` បើគ្មាន៖",
+            reply_markup=kb.get_cancel_keyboard(),
+            parse_mode="Markdown"
+        )
+        return IN_EXPIRY
+
+    context.user_data['stock_in_expiry'] = expiry
+
     await update.message.reply_text(
         "📝 សូមបញ្ចូល **ប្រភពផ្គត់ផ្គង់ / លេខវិក្កយបត្រ / កំណត់ចំណាំ** ៖\n"
         "(ឧទាហរណ៍៖ `អ្នកផ្គត់ផ្គង់ A - វិក្កយបត្រ #1049` ឬវាយ `-` បើគ្មាន) ៖",
@@ -105,13 +139,15 @@ async def stock_in_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     product_id = context.user_data['stock_in_product_id']
     qty = context.user_data['stock_in_qty']
     price = context.user_data['stock_in_price']
+    expiry = context.user_data.get('stock_in_expiry')
 
     success, message, updated_prod = db.record_stock_in(
         product_id=product_id,
         quantity=qty,
         unit_price=price,
         reference=ref,
-        user_id=user_id
+        user_id=user_id,
+        expiry_date=expiry
     )
 
     if success and updated_prod:
@@ -146,6 +182,7 @@ async def stock_in_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📦 ទំនិញ៖ **{updated_prod['name']}**\n"
             f"📥 ចំនួនបន្ថែម៖ +{qty} {updated_prod['unit']}\n"
             f"📊 ស្តុកថ្មីសរុប៖ **{updated_prod['quantity']} {updated_prod['unit']}**\n"
+            f"⏰ ថ្ងៃផុតកំណត់៖ {expiry or 'គ្មាន'}\n"
             f"💵 តម្លៃក្នុងមួយឯកតា៖ ${price:.2f}\n"
             f"💰 ចំណាយសរុប៖ ${total:.2f}\n"
             f"🔖 កំណត់ចំណាំ៖ {ref}\n"

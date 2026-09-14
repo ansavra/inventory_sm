@@ -272,6 +272,7 @@
                     {% endif %}
                     <th style="text-align: right;">តម្លៃលក់ ($)</th>
                     <th>ទីតាំង</th>
+                    <th>ថ្ងៃផុតកំណត់</th>
                     <th style="text-align: center;">ស្ថានភាព</th>
                 </tr>
             </thead>
@@ -288,6 +289,15 @@
                     {% endif %}
                     <td style="text-align: right;">${{ "%.2f"|format(p.sell_price or 0.0) }}</td>
                     <td>{{ p.location or 'ឃ្លាំងធំ' }}</td>
+                    <td style="font-size: 0.8em; white-space: nowrap;">
+                        {% if p.batches %}
+                            {% for b in p.batches %}
+                                {% if b.status == 'expired' %}<span class="badge-low">🔴 {{ b.expiry_date }} ×{{ b.quantity }}</span>
+                                {% elif b.status == 'soon' %}<span class="badge-low" style="opacity:0.8;">🟠 {{ b.expiry_date }} ×{{ b.quantity }}</span>
+                                {% else %}<span>🟢 {{ b.expiry_date }} ×{{ b.quantity }}</span>{% endif %}<br>
+                            {% endfor %}
+                        {% else %}—{% endif %}
+                    </td>
                     <td style="text-align: center;">
                         {% if p.quantity <= p.min_quantity %}
                         <span class="badge-low">⚠️ ជិតអស់</span>

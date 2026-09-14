@@ -59,7 +59,8 @@ def get_report_options_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("📜 ប្រវត្តិប្រតិបត្តិការ", callback_data="rep_history")
         ],
         [
-            InlineKeyboardButton("⚠️ បញ្ជីទំនិញជិតអស់", callback_data="rep_low")
+            InlineKeyboardButton("⚠️ បញ្ជីទំនិញជិតអស់", callback_data="rep_low"),
+            InlineKeyboardButton("⏰ ទំនិញផុតកំណត់/ជិតផុត", callback_data="rep_expiry")
         ]
     ]
     return InlineKeyboardMarkup(keyboard)

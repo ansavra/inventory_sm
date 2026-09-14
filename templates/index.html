@@ -79,6 +79,14 @@
                 </div>
             </div>
 
+            <div class="stat-card stat-card-clickable" id="card-expiry" title="មើលបញ្ជីទំនិញផុតកំណត់ / ជិតផុតកំណត់">
+                <div class="stat-icon icon-rose">⏰</div>
+                <div class="stat-details">
+                    <p class="stat-label">ផុតកំណត់ / ជិតផុត (៣០ថ្ងៃ)</p>
+                    <h3 class="stat-value"><span id="stat-expired" style="color:#f87171;">0</span> <span class="text-muted" style="font-size:1rem;">/</span> <span id="stat-expiring" style="color:#fbbf24;">0</span></h3>
+                </div>
+            </div>
+
             <div class="stat-card admin-only" id="card-total-cost">
                 <div class="stat-icon icon-emerald">💰</div>
                 <div class="stat-details">
@@ -92,6 +100,8 @@
         <div class="tabs-nav">
             <button class="tab-btn active" data-tab="tab-products">📦 បញ្ជីទំនិញក្នុងស្តុក</button>
             <button class="tab-btn" data-tab="tab-transactions">📜 ប្រវត្តិប្រតិបត្តិការ</button>
+            <button class="tab-btn" data-tab="tab-calendar">📅 ប្រតិទិនស្តុក</button>
+            <button class="tab-btn" data-tab="tab-expiry">⏰ ថ្ងៃផុតកំណត់</button>
             <button class="tab-btn admin-only" id="tab-btn-users" data-tab="tab-users" style="display: none;">👥 គ្រប់គ្រងបុគ្គលិក</button>
         </div>
 
@@ -107,6 +117,18 @@
                         <option value="all">ប្រភេទទាំងអស់ (All)</option>
                     </select>
                 </div>
+                <div class="filter-box">
+                    <select id="select-expiry-filter" title="តម្រងតាមស្ថានភាពផុតកំណត់">
+                        <option value="all">ផុតកំណត់៖ ទាំងអស់</option>
+                        <option value="expired">🔴 ផុតកំណត់ហើយ</option>
+                        <option value="soon">🟠 ជិតផុត (≤30 ថ្ងៃ)</option>
+                        <option value="ok">🟢 នៅល្អ</option>
+                        <option value="none">⚪ គ្មានថ្ងៃផុតកំណត់</option>
+                    </select>
+                </div>
+                <button class="btn btn-secondary" id="btn-open-import-modal" title="នាំចូលទិន្នន័យទំនិញពី CSV / Excel">
+                    <span>📤 Import ទិន្នន័យ</span>
+                </button>
                 <button class="btn btn-secondary" id="btn-refresh-products">
                     <span>🔄 ផ្ទុកឡើងវិញ</span>
                 </button>
@@ -128,6 +150,7 @@
                                 <th>ឈ្មោះទំនិញ</th>
                                 <th>ប្រភេទ</th>
                                 <th>ស្តុកនៅសល់</th>
+                                <th>ថ្ងៃផុតកំណត់</th>
                                 <th>តម្លៃដើម</th>
                                 <th>តម្លៃលក់</th>
                                 <th>ទីតាំង</th>
@@ -137,7 +160,7 @@
                         </thead>
                         <tbody id="products-table-body">
                             <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
+                                <td colspan="10" class="text-center py-5 text-muted">
                                     កំពុងផ្ទុកទិន្នន័យ...
                                 </td>
                             </tr>
@@ -150,9 +173,9 @@
         <!-- Transactions Section -->
         <section id="tab-transactions" class="tab-pane">
             <div class="toolbar">
-                <h2 class="section-title">ប្រវត្តិប្រតិបត្តិការ នាំចូល-នាំចេញ ចុងក្រោយ</h2>
+                <h2 class="section-title">📜 ប្រវត្តិប្រតិបត្តិការ នាំចូល-នាំចេញ</h2>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <a href="/api/export/transactions/csv" class="btn btn-secondary" id="btn-export-tx-csv" title="ទាញយកប្រវត្តិជា CSV សម្រាប់ Excel" style="text-decoration: none;">
+                    <a href="/api/export/transactions/csv" class="btn btn-secondary" id="btn-export-tx-csv" title="ទាញយកប្រវត្តិ (តាមតម្រង) ជា CSV សម្រាប់ Excel" style="text-decoration: none;">
                         <span>📥 ទាញយកជា CSV</span>
                     </a>
                     <button class="btn btn-secondary" id="btn-refresh-tx">
@@ -160,6 +183,44 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Transaction Filters (Calendar / Date Range) -->
+            <div class="filter-bar" id="tx-filter-bar">
+                <div class="filter-field">
+                    <label>📅 ពីថ្ងៃ</label>
+                    <input type="date" id="tx-date-from">
+                </div>
+                <div class="filter-field">
+                    <label>📅 ដល់ថ្ងៃ</label>
+                    <input type="date" id="tx-date-to">
+                </div>
+                <div class="filter-field">
+                    <label>ប្រភេទ</label>
+                    <select id="tx-type-filter">
+                        <option value="">ទាំងអស់ (IN + OUT)</option>
+                        <option value="IN">📥 នាំចូល (IN)</option>
+                        <option value="OUT">📤 នាំចេញ (OUT)</option>
+                    </select>
+                </div>
+                <div class="filter-field" style="flex: 1; min-width: 200px;">
+                    <label>🔍 ស្វែងរក</label>
+                    <input type="text" id="tx-search" placeholder="ឈ្មោះ, កូដ, កំណត់ចំណាំ...">
+                </div>
+                <div class="filter-quick">
+                    <button class="btn btn-secondary btn-sm" data-range="today">ថ្ងៃនេះ</button>
+                    <button class="btn btn-secondary btn-sm" data-range="yesterday">ម្សិលមិញ</button>
+                    <button class="btn btn-secondary btn-sm" data-range="week">៧ថ្ងៃ</button>
+                    <button class="btn btn-secondary btn-sm" data-range="month">ខែនេះ</button>
+                    <button class="btn btn-secondary btn-sm" data-range="lastmonth">ខែមុន</button>
+                    <button class="btn btn-secondary btn-sm" data-range="clear">✖ លុបតម្រង</button>
+                </div>
+            </div>
+            <div class="summary-strip" id="tx-summary-strip">
+                <span class="badge badge-success">📥 នាំចូល៖ <strong id="tx-sum-in-qty">0</strong> (<span id="tx-sum-in-count">0</span> ដង) <span id="tx-sum-in-amt"></span></span>
+                <span class="badge badge-warning">📤 នាំចេញ៖ <strong id="tx-sum-out-qty">0</strong> (<span id="tx-sum-out-count">0</span> ដង) <span id="tx-sum-out-amt"></span></span>
+                <span class="text-muted small" id="tx-filter-label"></span>
+            </div>
+
             <div class="table-card">
                 <div class="table-responsive">
                     <table class="data-table">
@@ -169,6 +230,7 @@
                                 <th>ប្រភេទ</th>
                                 <th>ទំនិញ</th>
                                 <th>ចំនួន</th>
+                                <th>ផុតកំណត់</th>
                                 <th>តម្លៃ</th>
                                 <th>សរុប</th>
                                 <th>កំណត់ចំណាំ / វិក្កយបត្រ</th>
@@ -177,10 +239,88 @@
                         </thead>
                         <tbody id="tx-table-body">
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">
+                                <td colspan="9" class="text-center py-5 text-muted">
                                     កំពុងផ្ទុកទិន្នន័យ...
                                 </td>
                             </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Calendar Section (Stock In / Out per day) -->
+        <section id="tab-calendar" class="tab-pane">
+            <div class="toolbar">
+                <h2 class="section-title">📅 ប្រតិទិននាំចូល-នាំចេញ និងថ្ងៃផុតកំណត់</h2>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="btn btn-secondary btn-sm" id="cal-prev">◀</button>
+                    <strong id="cal-title" style="min-width: 150px; text-align: center;">...</strong>
+                    <button class="btn btn-secondary btn-sm" id="cal-next">▶</button>
+                    <button class="btn btn-secondary btn-sm" id="cal-today">ថ្ងៃនេះ</button>
+                </div>
+            </div>
+            <p class="text-muted small" style="margin-bottom: 0.75rem;">
+                ចុចលើថ្ងៃណាមួយ ដើម្បីមើលប្រវត្តិនាំចូល-នាំចេញរបស់ថ្ងៃនោះ។ 🟢 = នាំចូល, 🟠 = នាំចេញ, ⏰ = ឡូតិ៍ផុតកំណត់ក្នុងថ្ងៃនោះ
+            </p>
+            <div class="table-card" style="padding: 1rem;">
+                <div class="calendar-grid" id="calendar-grid"></div>
+            </div>
+        </section>
+
+        <!-- Expiry Section -->
+        <section id="tab-expiry" class="tab-pane">
+            <div class="toolbar">
+                <h2 class="section-title">⏰ ទំនិញផុតកំណត់ និងជិតផុតកំណត់ (តាមឡូតិ៍)</h2>
+                <button class="btn btn-secondary" id="btn-refresh-expiry"><span>🔄 ផ្ទុកឡើងវិញ</span></button>
+            </div>
+            <div class="filter-bar">
+                <div class="filter-field">
+                    <label>ស្ថានភាព</label>
+                    <select id="expiry-status-filter">
+                        <option value="alert">🔴🟠 ផុតកំណត់ + ជិតផុត</option>
+                        <option value="expired">🔴 ផុតកំណត់ហើយ</option>
+                        <option value="soon">🟠 ជិតផុតកំណត់</option>
+                        <option value="ok">🟢 នៅល្អ</option>
+                        <option value="all">ទាំងអស់</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label>ក្នុងរយៈពេល (ថ្ងៃ)</label>
+                    <select id="expiry-days-filter">
+                        <option value="7">៧ ថ្ងៃ</option>
+                        <option value="15">១៥ ថ្ងៃ</option>
+                        <option value="30" selected>៣០ ថ្ងៃ</option>
+                        <option value="60">៦០ ថ្ងៃ</option>
+                        <option value="90">៩០ ថ្ងៃ</option>
+                        <option value="180">១៨០ ថ្ងៃ</option>
+                    </select>
+                </div>
+                <div class="filter-field" style="flex: 1; min-width: 200px;">
+                    <label>🔍 ស្វែងរក</label>
+                    <input type="text" id="expiry-search" placeholder="ឈ្មោះ ឬកូដទំនិញ...">
+                </div>
+            </div>
+            <div class="summary-strip">
+                <span class="badge badge-danger">🔴 ផុតកំណត់ហើយ៖ <strong id="exp-sum-expired-b">0</strong> ឡូតិ៍ / <strong id="exp-sum-expired-q">0</strong> ឯកតា</span>
+                <span class="badge badge-warning">🟠 ជិតផុតកំណត់៖ <strong id="exp-sum-soon-b">0</strong> ឡូតិ៍ / <strong id="exp-sum-soon-q">0</strong> ឯកតា</span>
+            </div>
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ថ្ងៃផុតកំណត់</th>
+                                <th>នៅសល់</th>
+                                <th>ទំនិញ</th>
+                                <th>ប្រភេទ</th>
+                                <th>ចំនួនក្នុងឡូតិ៍</th>
+                                <th>ទីតាំង</th>
+                                <th style="text-align: right;">សកម្មភាព</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expiry-table-body">
+                            <tr><td colspan="7" class="text-center py-5 text-muted">កំពុងផ្ទុកទិន្នន័យ...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -312,14 +452,21 @@
                             <input type="number" name="quantity" value="0" min="0">
                         </div>
                         <div class="form-group">
+                            <label>ថ្ងៃផុតកំណត់ស្តុកដំបូង (បើមាន)</label>
+                            <input type="date" name="expiry_date">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
                             <label>កម្រិតជូនដំណឹងជិតអស់ (Min Qty)</label>
                             <input type="number" name="min_quantity" value="5" min="0">
                         </div>
+                        <div class="form-group">
+                            <label>ទីតាំងទុកដាក់ក្នុងឃ្លាំង</label>
+                            <input type="text" name="location" value="ឃ្លាំងធំ" placeholder="ឧ. ទូ A, ធ្នើរទី២">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>ទីតាំងទុកដាក់ក្នុងឃ្លាំង</label>
-                        <input type="text" name="location" value="ឃ្លាំងធំ" placeholder="ឧ. ទូ A, ធ្នើរទី២">
-                    </div>
+                    <p class="text-muted small">💡 ថ្ងៃផុតកំណត់បន្ថែមទៀត អាចបញ្ចូលបានពេល «📥 នាំចូល» ម្តងទៀត — ទំនិញ ១ អាចមានថ្ងៃផុតកំណត់ច្រើន (ឡូតិ៍ច្រើន)។</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-close="modal-add-product">បោះបង់</button>
@@ -344,10 +491,17 @@
                         <label>ចំនួនដែលត្រូវនាំចូលបន្ថែម *</label>
                         <input type="number" name="quantity" required min="1" placeholder="ឧ. 10, 50">
                     </div>
-                    <div class="form-group">
-                        <label>តម្លៃទិញចូលក្នុង ១ឯកតា ($)</label>
-                        <input type="number" step="0.01" name="unit_price" id="in-unit-price" value="0.00">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>តម្លៃទិញចូលក្នុង ១ឯកតា ($)</label>
+                            <input type="number" step="0.01" name="unit_price" id="in-unit-price" value="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>⏰ ថ្ងៃផុតកំណត់ (Expiry)</label>
+                            <input type="date" name="expiry_date" id="in-expiry-date">
+                        </div>
                     </div>
+                    <div id="in-existing-batches" class="batch-hint"></div>
                     <div class="form-group">
                         <label>កំណត់ចំណាំ / អ្នកផ្គត់ផ្គង់ / លេខវិក្កយបត្រ</label>
                         <input type="text" name="reference" placeholder="ឧ. ទិញថែមពីក្រុមហ៊ុន A">
@@ -372,6 +526,12 @@
                 <input type="hidden" name="product_id" id="out-product-id">
                 <div class="modal-body">
                     <p class="modal-subtitle" id="out-product-title">ទំនិញ៖ ...</p>
+                    <div class="form-group" id="out-batch-group">
+                        <label>⏰ ដកចេញពីឡូតិ៍ (ថ្ងៃផុតកំណត់)</label>
+                        <select name="batch_id" id="out-batch-select">
+                            <option value="">🔄 ស្វ័យប្រវត្តិ — ផុតកំណត់មុន ចេញមុន (FEFO)</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>ចំនួនដែលត្រូវដកចេញ / លក់ *</label>
                         <input type="number" name="quantity" required min="1" placeholder="ឧ. 1, 5">
@@ -510,6 +670,92 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-close="modal-add-user">បោះបង់</button>
                     <button type="submit" class="btn btn-primary">បង្កើតគណនី</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 7. Product Batches / Expiry Modal -->
+    <div class="modal-backdrop" id="modal-batches">
+        <div class="modal-dialog" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3>⏰ ថ្ងៃផុតកំណត់តាមឡូតិ៍</h3>
+                <button class="modal-close" data-close="modal-batches">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle" id="batches-product-title">ទំនិញ៖ ...</p>
+                <div class="table-responsive">
+                    <table class="data-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>ថ្ងៃផុតកំណត់</th>
+                                <th>នៅសល់</th>
+                                <th>ចំនួន</th>
+                                <th style="text-align: right;">សកម្មភាព</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batches-table-body"></tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mt-2" id="batches-untracked-note"></p>
+                <form id="form-add-batch" class="batch-add-form">
+                    <input type="hidden" id="batch-add-product-id">
+                    <div class="form-row" style="grid-template-columns: 1fr 1fr auto; align-items: end;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>➕ បន្ថែមឡូតិ៍ថ្មី — ថ្ងៃផុតកំណត់</label>
+                            <input type="date" id="batch-add-expiry" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>ចំនួននាំចូល</label>
+                            <input type="number" id="batch-add-qty" min="1" value="1" required>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm" style="height: 40px;">📥 នាំចូល</button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modal-batches">បិទ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. Import Data Modal -->
+    <div class="modal-backdrop" id="modal-import">
+        <div class="modal-dialog" style="max-width: 720px;">
+            <div class="modal-header">
+                <h3>📤 នាំចូលទិន្នន័យទំនិញ (Import CSV / Excel)</h3>
+                <button class="modal-close" data-close="modal-import">&times;</button>
+            </div>
+            <form id="form-import">
+                <div class="modal-body">
+                    <div class="import-steps">
+                        <div class="import-step">
+                            <strong>១. ទាញយកឯកសារគំរូ</strong>
+                            <p class="text-muted small">បំពេញទិន្នន័យតាមគំរូ។ ទំនិញ ១ អាចមានច្រើនជួរ ដោយប្រើ <code>code</code> ដូចគ្នា តែ <code>expiry_date</code> ខុសគ្នា = ឡូតិ៍ផុតកំណត់ច្រើន។</p>
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                <a href="/api/import/sample?format=csv" class="btn btn-secondary btn-sm" style="text-decoration:none;">📄 គំរូ CSV</a>
+                                <a href="/api/import/sample?format=xlsx" class="btn btn-secondary btn-sm" style="text-decoration:none;">📊 គំរូ Excel (.xlsx)</a>
+                            </div>
+                            <p class="text-muted small mt-2">Columns: <code>code, name, category, unit, cost_price, sell_price, quantity, min_quantity, location, expiry_date (YYYY-MM-DD), reference</code></p>
+                        </div>
+                        <div class="import-step">
+                            <strong>២. ជ្រើសរើសឯកសារ</strong>
+                            <div class="form-group" style="margin-top:0.5rem;">
+                                <input type="file" id="import-file" accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                            </div>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="import-update-existing" checked>
+                                <span>កែព័ត៌មានទំនិញដែលមានកូដស្រាប់ (ឈ្មោះ, តម្លៃ, ទីតាំង...)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="import-preview" class="import-preview" style="display:none;"></div>
+                    <div id="import-result" class="import-result" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-import">បិទ</button>
+                    <button type="button" class="btn btn-secondary" id="btn-import-preview">👁️ មើលជាមុន</button>
+                    <button type="submit" class="btn btn-primary" id="btn-import-submit">📤 នាំចូលទិន្នន័យ</button>
                 </div>
             </form>
         </div>

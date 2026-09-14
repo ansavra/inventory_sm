@@ -85,3 +85,27 @@ async def reports_callback_handler(update: Update, context: ContextTypes.DEFAULT
         for i, p in enumerate(lows, start=1):
             text += f"{i}. `{p['code']}` - **{p['name']}** ៖ សល់ **{p['quantity']}** (កំណត់៖ {p['min_quantity']})\n"
         await query.message.reply_text(text, parse_mode="Markdown")
+
+    elif data == "rep_expiry":
+        days = 30
+        summary = db.get_expiry_summary(days=days)
+        batches = db.list_expiry_batches(days=days, status='alert', limit=30)
+        if not batches:
+            await query.message.reply_text(f"🎉 គ្មានទំនិញណាផុតកំណត់ ឬជិតផុតកំណត់ក្នុង {days} ថ្ងៃខាងមុខឡើយ!")
+            return
+
+        text = (
+            f"⏰ **ទំនិញផុតកំណត់ / ជិតផុតកំណត់ ({days} ថ្ងៃ)**\n"
+            f"🔴 ផុតកំណត់ហើយ៖ {summary['expired']['batches']} ឡូតិ៍ ({summary['expired']['qty']} ឯកតា)\n"
+            f"🟠 ជិតផុតកំណត់៖ {summary['expiring_soon']['batches']} ឡូតិ៍ ({summary['expiring_soon']['qty']} ឯកតា)\n\n"
+        )
+        for b in batches:
+            if b['status'] == 'expired':
+                tag = f"🔴 ផុត {abs(b['days_left'])} ថ្ងៃហើយ"
+            else:
+                tag = f"🟠 នៅ {b['days_left']} ថ្ងៃទៀត"
+            text += (
+                f"• **{b['product_name']}** (`{b['product_code']}`)\n"
+                f"   ⏰ {b['expiry_date']} — {tag} — សល់ **{b['quantity']} {b['product_unit']}**\n"
+            )
+        await query.message.reply_text(text, parse_mode="Markdown")

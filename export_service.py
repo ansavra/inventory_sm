@@ -15,6 +15,7 @@ def generate_products_csv(products: List[Dict[str, Any]], is_admin: bool = False
             "កូដទំនិញ (Code)", "ឈ្មោះទំនិញ (Name)", "ប្រភេទ (Category)",
             "ចំនួនស្តុក (Quantity)", "ឯកតា (Unit)", "តម្លៃដើម (Cost $)",
             "តម្លៃលក់ (Sell $)", "កម្រិតជូនដំណឹង (Min Qty)", "ទីតាំង (Location)",
+            "ផុតកំណត់ជិតបំផុត (Nearest Expiry)", "ឡូតិ៍ផុតកំណត់ទាំងអស់ (Batches)",
             "កាលបរិច្ឆេទបង្កើត"
         ]
     else:
@@ -22,12 +23,15 @@ def generate_products_csv(products: List[Dict[str, Any]], is_admin: bool = False
             "កូដទំនិញ (Code)", "ឈ្មោះទំនិញ (Name)", "ប្រភេទ (Category)",
             "ចំនួនស្តុក (Quantity)", "ឯកតា (Unit)",
             "តម្លៃលក់ (Sell $)", "កម្រិតជូនដំណឹង (Min Qty)", "ទីតាំង (Location)",
+            "ផុតកំណត់ជិតបំផុត (Nearest Expiry)", "ឡូតិ៍ផុតកំណត់ទាំងអស់ (Batches)",
             "កាលបរិច្ឆេទបង្កើត"
         ]
     writer.writerow(headers)
 
     for p in products:
         created = p.get('created_at', '')
+        nearest = p.get('nearest_expiry') or ''
+        batches_str = "; ".join(f"{b['expiry_date']} x{b['quantity']}" for b in (p.get('batches') or []))
         if is_admin:
             writer.writerow([
                 p.get('code', ''),
@@ -39,6 +43,8 @@ def generate_products_csv(products: List[Dict[str, Any]], is_admin: bool = False
                 f"{float(p.get('sell_price') or 0.0):.2f}",
                 p.get('min_quantity', 5),
                 p.get('location', ''),
+                nearest,
+                batches_str,
                 created
             ])
         else:
@@ -51,6 +57,8 @@ def generate_products_csv(products: List[Dict[str, Any]], is_admin: bool = False
                 f"{float(p.get('sell_price') or 0.0):.2f}",
                 p.get('min_quantity', 5),
                 p.get('location', ''),
+                nearest,
+                batches_str,
                 created
             ])
     return output.getvalue()
@@ -64,7 +72,7 @@ def generate_transactions_csv(transactions: List[Dict[str, Any]], is_admin: bool
 
     headers = [
         "កាលបរិច្ឆេទ & ម៉ោង", "ប្រភេទ", "កូដទំនិញ", "ឈ្មោះទំនិញ",
-        "ចំនួន", "ឯកតា", "តម្លៃរាយ ($)", "តម្លៃសរុប ($)",
+        "ចំនួន", "ឯកតា", "ថ្ងៃផុតកំណត់ (Expiry)", "តម្លៃរាយ ($)", "តម្លៃសរុប ($)",
         "កំណត់ចំណាំ / វិក្កយបត្រ", "អ្នកកត់ត្រា"
     ]
     writer.writerow(headers)
@@ -86,6 +94,7 @@ def generate_transactions_csv(transactions: List[Dict[str, Any]], is_admin: bool
             t.get('product_name', ''),
             t.get('quantity', 0),
             t.get('product_unit', ''),
+            t.get('expiry_date') or '',
             unit_price,
             total_price,
             t.get('reference', ''),

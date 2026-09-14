@@ -177,7 +177,10 @@ async def stock_out_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📦 ទំនិញ៖ **{updated_prod['name']}**\n"
             f"📤 ចំនួនដកចេញ៖ -{qty} {updated_prod['unit']}\n"
             f"📊 ស្តុកនៅសល់ជាក់ស្តែង៖ **{updated_prod['quantity']} {updated_prod['unit']}**\n"
-            f"💵 តម្លៃលក់៖ ${price:.2f}\n"
+            + ("⏰ ដកចេញពីឡូតិ៍ (ផុតកំណត់មុន ចេញមុន)៖ " + ", ".join(
+                f"`{d['expiry_date']}` ×{d['quantity']}" for d in updated_prod.get('batches_deducted', [])
+            ) + "\n" if updated_prod.get('batches_deducted') else "")
+            + f"💵 តម្លៃលក់៖ ${price:.2f}\n"
             f"💰 ចំណូលសរុប៖ ${total:.2f}\n"
             f"🔖 មូលហេតុ/វិក្កយបត្រ៖ {ref}\n"
             f"👤 អ្នកកាត់ស្តុក៖ {update.effective_user.full_name}"

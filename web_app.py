@@ -35,6 +35,18 @@ jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+@app.middleware("http")
+async def no_cache_for_ui(request: Request, call_next):
+    """កុំឱ្យ browser cache HTML/JS/CSS ដើម្បីឱ្យឃើញកូដថ្មីភ្លាមៗក្រោយ update (មិនចាំបាច់ Ctrl+F5)"""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/") or path in ("/", "/login") or path.startswith("/report/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 
 # ==========================================
 # Auth Dependencies

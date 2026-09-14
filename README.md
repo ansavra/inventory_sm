@@ -121,10 +121,10 @@ Container លើ Render ត្រូវបាន rebuild រាល់ពេល d
 
 | ឯកសារ | មុខងារ |
 |---|---|
-| `START_LOCAL_HIDDEN.vbs` | បើក Web Dashboard + Telegram Bot ក្នុង Local/Wi-Fi ដោយលាក់ផ្ទាំង CMD (browser បើកដោយស្វ័យប្រវត្តិ) |
+| `បើកកម្មវិធី.vbs` | បើក Web Dashboard + Telegram Bot ក្នុង Local/Wi-Fi ដោយលាក់ផ្ទាំង CMD (browser បើកដោយស្វ័យប្រវត្តិ) |
 | `START_SYSTEM_HIDDEN.vbs` | ដូចខាងលើ បូក Cloudflare Tunnel (Internet) |
 | `STOP_SYSTEM.bat` | បិទប្រព័ន្ធទាំងអស់ (Web + Bot + Tunnel) |
 | `run.bat` / `START_SYSTEM.bat` | របៀបចាស់ — បង្ហាញផ្ទាំង CMD (ចុច Ctrl+C ដើម្បីបិទ) |
 
 ក្នុង Hidden mode, output ទាំងអស់ត្រូវសរសេរទៅ `logs/web.log` និង `logs/bot.log`។
-💡 ចង់ឱ្យបើកដោយស្វ័យប្រវត្តិពេលបើកកុំព្យូទ័រ៖ ចុចស្តាំលើ `START_LOCAL_HIDDEN.vbs` → Create shortcut → ដាក់ shortcut ចូល folder `shell:startup`។
+💡 ចង់ឱ្យបើកដោយស្វ័យប្រវត្តិពេលបើកកុំព្យូទ័រ៖ ចុចស្តាំលើ `បើកកម្មវិធី.vbs` → Create shortcut → ដាក់ shortcut ចូល folder `shell:startup`។

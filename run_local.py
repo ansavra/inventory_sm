@@ -30,6 +30,17 @@ HIDDEN_MODE = (
 LOG_DIR = BASE_DIR / "logs"
 PID_FILE = BASE_DIR / ".sm_pids"
 
+if HIDDEN_MODE:
+    # pythonw គ្មាន console -> សរសេរ output/error របស់ launcher ទៅ logs/launcher.log
+    try:
+        LOG_DIR.mkdir(exist_ok=True)
+        _launcher_log = open(LOG_DIR / "launcher.log", "a", encoding="utf-8", errors="replace", buffering=1)
+        sys.stdout = _launcher_log
+        sys.stderr = _launcher_log
+        print(f"===== Launcher started (hidden) {time.strftime('%Y-%m-%d %H:%M:%S')} =====")
+    except Exception:
+        pass
+
 
 def child_kwargs(log_name: str) -> dict:
     """Popen kwargs៖ ក្នុង Hidden mode លាក់ console របស់កូនដំណើរការ និងបញ្ជូន output ទៅ log file"""

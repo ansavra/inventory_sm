@@ -30,6 +30,9 @@ HIDDEN_MODE = (
 LOG_DIR = BASE_DIR / "logs"
 PID_FILE = BASE_DIR / ".sm_pids"
 
+# Cloud/Tunnel mode -> Bot ត្រូវបានបើកជានិច្ច (ប្រើដោយ /api/system/status ក្នុង web_app.py)
+os.environ["SM_MODE"] = "cloud"
+
 if HIDDEN_MODE:
     # pythonw គ្មាន console -> សរសេរ output/error របស់ launcher ទៅ logs/launcher.log
     try:

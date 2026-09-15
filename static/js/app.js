@@ -1314,10 +1314,27 @@ if (btnTestAlert) {
     });
 }
 
+// ស្ថានភាព Telegram Bot លើ navbar pill (Local mode = គ្មាន Bot) — មិនរារាំង boot ទេ
+async function updateSystemStatusPill() {
+    try {
+        const pillText = document.getElementById('status-pill-text');
+        if (!pillText) return;
+        const res = await fetch('/api/system/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        pillText.textContent = data.telegram_bot
+            ? '🤖 Telegram Bot: សកម្ម'
+            : '💻 Local Mode (គ្មាន Bot)';
+    } catch (e) {
+        // មិនអីទេ — រក្សាអត្ថបទលំនាំដើម
+    }
+}
+
 // Initial boot
 (async () => {
     const isOk = await checkAuth();
     if (isOk) {
+        updateSystemStatusPill();
         fetchStats();
         fetchProducts();
     }

@@ -121,10 +121,12 @@ Container លើ Render ត្រូវបាន rebuild រាល់ពេល d
 
 | ឯកសារ | មុខងារ |
 |---|---|
-| `បើកកម្មវិធី.vbs` | បើក Web Dashboard + Telegram Bot ក្នុង Local/Wi-Fi ដោយលាក់ផ្ទាំង CMD (browser បើកដោយស្វ័យប្រវត្តិ) |
-| `START_SYSTEM_HIDDEN.vbs` | ដូចខាងលើ បូក Cloudflare Tunnel (Internet) |
+| `បើកកម្មវិធី.vbs` | បើក **Web Dashboard តែប៉ុណ្ណោះ** (Local/Wi-Fi) ដោយលាក់ផ្ទាំង CMD (browser បើកដោយស្វ័យប្រវត្តិ) — Telegram Bot **មិន**ត្រូវបានបើកទេ ដើម្បីជៀសវាង `telegram.error.Conflict` ពេល Bot token ដូចគ្នាកំពុងដំណើរការនៅ Cloud |
+| `START_SYSTEM_HIDDEN.vbs` | Web Dashboard + Telegram Bot + Cloudflare Tunnel (Internet) |
 | `STOP_SYSTEM.bat` | បិទប្រព័ន្ធទាំងអស់ (Web + Bot + Tunnel) |
 | `run.bat` / `START_SYSTEM.bat` | របៀបចាស់ — បង្ហាញផ្ទាំង CMD (ចុច Ctrl+C ដើម្បីបិទ) |
 
-ក្នុង Hidden mode, output ទាំងអស់ត្រូវសរសេរទៅ `logs/web.log` និង `logs/bot.log`។
+🤖 **ចង់បើក Telegram Bot ក្នុង Local ផង?** កំណត់ environment variable `SM_WITH_BOT=1` មុនពេលរត់ `run_local.py` (ឧ. `set SM_WITH_BOT=1` ក្នុង CMD) ឬកែ `បើកកម្មវិធី.vbs` ដោយបន្ថែមបន្ទាត់ `sh.Environment("PROCESS")("SM_WITH_BOT") = "1"` នៅក្រោមបន្ទាត់ `SM_HIDDEN`។ ពេល Bot បិទ, navbar នៅលើ Dashboard នឹងបង្ហាញ "💻 Local Mode (គ្មាន Bot)" (ការជូនដំណឹងទៅ Telegram តាម `notifier.py` នៅតែដំណើរការធម្មតា)។
+
+ក្នុង Hidden mode, output ទាំងអស់ត្រូវសរសេរទៅ `logs/launcher.log`, `logs/web.log` និង `logs/bot.log` (បើ Bot បើក)។
 💡 ចង់ឱ្យបើកដោយស្វ័យប្រវត្តិពេលបើកកុំព្យូទ័រ៖ ចុចស្តាំលើ `បើកកម្មវិធី.vbs` → Create shortcut → ដាក់ shortcut ចូល folder `shell:startup`។

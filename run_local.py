@@ -30,6 +30,12 @@ HIDDEN_MODE = (
 LOG_DIR = BASE_DIR / "logs"
 PID_FILE = BASE_DIR / ".sm_pids"
 
+# ---- Telegram Bot (Local mode: បិទតាមលំនាំដើម) ----
+# Bot token ដូចគ្នាត្រូវបាន poll នៅកន្លែងផ្សេង (Cloud) -> បើបើកនៅទីនេះទៀត នឹងកើត telegram.error.Conflict
+# បើចង់បើក Bot ក្នុង Local ផង៖ កំណត់ environment variable SM_WITH_BOT=1
+START_BOT = os.environ.get("SM_WITH_BOT", "0") == "1"
+os.environ["SM_MODE"] = "local"
+
 if HIDDEN_MODE:
     # pythonw គ្មាន console -> សរសេរ output/error របស់ launcher ទៅ logs/launcher.log
     try:
@@ -130,8 +136,10 @@ def main():
         print("  🚀 ចាប់ផ្តើមដំណើរការប្រព័ន្ធ SM Inventory ក្នុង LOCAL SERVER")
         print("=" * 65)
 
+        total_steps = 2 if START_BOT else 1
+
         # 1. Start Web Dashboard
-        print("▶️ [1/2] កំពុងដំណើរការ Local Web Dashboard (FastAPI / Uvicorn)...")
+        print(f"▶️ [1/{total_steps}] កំពុងដំណើរការ Local Web Dashboard (FastAPI / Uvicorn)...")
         web_proc = subprocess.Popen(
             [PYTHON_EXE, "-m", "uvicorn", "web_app:app", "--host", "0.0.0.0", "--port", str(port)],
             cwd=str(BASE_DIR),
@@ -145,15 +153,20 @@ def main():
         else:
             print(f"✅ Web Dashboard ដំណើរការជោគជ័យលើ Local Server!")
 
-        # 2. Start Telegram Bot
-        print("▶️ [2/2] កំពុងដំណើរការ Telegram Bot (main.py)...")
-        bot_proc = subprocess.Popen(
-            [PYTHON_EXE, "main.py"],
-            cwd=str(BASE_DIR),
-            **child_kwargs("bot")
-        )
-        processes["telegram_bot"] = bot_proc
-        write_pid_file()
+        # 2. Start Telegram Bot (តែពេល SM_WITH_BOT=1 ប៉ុណ្ណោះ)
+        if START_BOT:
+            print(f"▶️ [2/{total_steps}] កំពុងដំណើរការ Telegram Bot (main.py)...")
+            bot_proc = subprocess.Popen(
+                [PYTHON_EXE, "main.py"],
+                cwd=str(BASE_DIR),
+                **child_kwargs("bot")
+            )
+            processes["telegram_bot"] = bot_proc
+            write_pid_file()
+            bot_status = "ដំណើរការរួចរាល់"
+        else:
+            print("⏭️ រំលង Telegram Bot (Local mode) — Bot មិនត្រូវបានបើកនៅទីនេះទេ (SM_WITH_BOT=0)")
+            bot_status = "បិទ (Local mode) — បើចង់បើក កំណត់ SM_WITH_BOT=1"
 
         local_url = f"http://localhost:{port}/login"
         lan_url = f"http://{local_ip}:{port}/login"
@@ -163,7 +176,7 @@ def main():
         print("=" * 65)
         print(f"  💻 លើកុំព្យូទ័រនេះ (Localhost)  : {local_url}")
         print(f"  📱 ឧបករណ៍ផ្សេងលើ Wi-Fi (LAN) : {lan_url}")
-        print(f"  🤖 Telegram Bot                : ដំណើរការរួចរាល់")
+        print(f"  🤖 Telegram Bot                : {bot_status}")
         print("=" * 65)
         print("  🔑 គណនី Admin ដំបូង           : Username: admin | Password: admin123")
         print("  💡 ចុច Ctrl + C ក្នុងផ្ទាំងនេះ ដើម្បីបិទដំណើរការប្រព័ន្ធ។\n")

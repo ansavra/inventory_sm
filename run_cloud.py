@@ -7,6 +7,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 def main():
+    # Cloud mode -> Bot ត្រូវបានបើកជានិច្ច (ប្រើដោយ /api/system/status ក្នុង web_app.py)
+    os.environ["SM_MODE"] = "cloud"
     port = int(os.getenv("PORT", "8000"))
     print("=" * 60)
     print(f"🚀 Starting SM Telegram Bot & Inventory Web on Cloud (Port: {port})")

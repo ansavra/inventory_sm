@@ -217,6 +217,14 @@ async def api_me(user: Dict[str, Any] = Depends(require_auth)):
     return user
 
 
+@app.get("/api/system/status")
+async def api_system_status(user: Dict[str, Any] = Depends(require_auth)):
+    """ស្ថានភាពប្រព័ន្ធ៖ Telegram Bot កំពុងដំណើរការជាមួយ Web នេះឬអត់ (Local vs Cloud)"""
+    mode = "cloud" if os.environ.get("SM_MODE") == "cloud" else "local"
+    telegram_bot = os.environ.get("SM_WITH_BOT") == "1" or os.environ.get("SM_MODE") == "cloud"
+    return {"telegram_bot": telegram_bot, "mode": mode}
+
+
 # ==========================================
 # User Management Endpoints (Admin Only)
 # ==========================================

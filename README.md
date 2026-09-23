@@ -130,3 +130,34 @@ Container លើ Render ត្រូវបាន rebuild រាល់ពេល d
 
 ក្នុង Hidden mode, output ទាំងអស់ត្រូវសរសេរទៅ `logs/launcher.log`, `logs/web.log` និង `logs/bot.log` (បើ Bot បើក)។
 💡 ចង់ឱ្យបើកដោយស្វ័យប្រវត្តិពេលបើកកុំព្យូទ័រ៖ ចុចស្តាំលើ `បើកកម្មវិធី.vbs` → Create shortcut → ដាក់ shortcut ចូល folder `shell:startup`។
+
+## ☁️ Vercel + Supabase (Cloud)
+
+### ១. Supabase (ទិន្នន័យ)
+តារាងទាំងអស់ស្ថិតក្នុង schema **`sm`** (ដាច់ពីតារាងផ្សេងក្នុង project ដដែល) ហើយបើក RLS រួចរាល់។
+
+1. Supabase Dashboard → Project Settings → Database → Connection string → **URI** → **Transaction pooler**
+2. ដាក់ក្នុង `.env`៖ `DATABASE_URL=postgresql://postgres.<ref>:<PASSWORD>@...pooler.supabase.com:6543/postgres`
+3. រត់៖ `.venv\Scripts\python.exe setup_supabase.py --from inventory.db`
+
+ពេលមាន `DATABASE_URL` ប្រព័ន្ធប្រើ Supabase ដោយស្វ័យប្រវត្តិ (ទាំង local និង cloud); បើគ្មាន វាប្រើ SQLite ដដែល។
+
+### ២. Vercel (Web Dashboard)
+1. vercel.com → **Add New → Project** → Import repo `ansavra/inventory_sm`
+2. Environment Variables ត្រូវបន្ថែម៖
+
+| Key | តម្លៃ |
+|---|---|
+| `DATABASE_URL` | Connection string ពី Supabase (Transaction pooler) |
+| `DB_SCHEMA` | `sm` |
+| `APP_TZ` | `Asia/Phnom_Penh` |
+| `TELEGRAM_BOT_TOKEN` | Token ពី @BotFather |
+| `ADMIN_USER_IDS` | Telegram ID របស់អ្នកគ្រប់គ្រង |
+| `TELEGRAM_WEBHOOK_SECRET` | អក្សរចៃដន្យវែងៗ (ឧ. 32 តួ) |
+
+3. Deploy រួច → Login → tab **គ្រប់គ្រងបុគ្គលិក** → កាត **🔗 Telegram Bot Webhook** → ចុច «ចុះឈ្មោះ Webhook»
+
+### ៣. Telegram Bot
+- **លើ Vercel**៖ ប្រើ Webhook (state នៃសន្ទនារក្សាក្នុងតារាង `bot_state`)
+- **ក្នុង local**៖ ប្រើ Polling — ត្រូវចុច «លុប Webhook» ជាមុនសិន បើមិនដូច្នេះវានឹងប៉ះទង្គិចគ្នា
+- ការស្កេន Barcode/QR ដំណើរការតែក្នុង local (Vercel គ្មាន library `libzbar`)

@@ -137,27 +137,17 @@ async def generic_refresh_callback(update: Update, context: ContextTypes.DEFAULT
                 pass
 
 
-def main():
-    print("==================================================")
-    print("🚀 កំពុងចាប់ផ្តើម Telegram Inventory Bot...")
-    print("==================================================")
+def build_application(persistence=None):
+    """បង្កើត Telegram Application និងចុះឈ្មោះ Handler ទាំងអស់
+    (ប្រើរួមគ្នាទាំង Polling ក្នុង local និង Webhook លើ Vercel)"""
+    builder = ApplicationBuilder().token(config.BOT_TOKEN)
+    if persistence is not None:
+        builder = builder.persistence(persistence)
+    app = builder.build()
 
-    # 1. ពិនិត្យ Token
-    if not config.BOT_TOKEN or config.BOT_TOKEN == "your_telegram_bot_token_here":
-        print("\n❌ កំហុស៖ មិនទាន់ឃើញ TELEGRAM_BOT_TOKEN ក្នុងឯកសារ .env ឡើយ!")
-        print("👉 សូមបង្កើតឯកសារ .env (ចម្លងពី .env.example) រួចដាក់ Token របស់ Bot របស់អ្នក។\n")
-        print("ឧទាហរណ៍ក្នុងឯកសារ .env:")
-        print("TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrSTUvwxYZ")
-        print("ADMIN_USER_IDS=123456789\n")
-        sys.exit(1)
+    # ពេលមាន persistence (Webhook/serverless) ត្រូវរក្សាស្ថានភាពសន្ទនាក្នុង Database
+    _persist = persistence is not None
 
-    # 2. បង្កើត SQLite Database
-    print("📦 កំពុងរៀបចំ Database (inventory.db)...")
-    db.init_db()
-    print("✅ Database រួចរាល់!")
-
-    # 3. បង្កើត Telegram Application
-    app = ApplicationBuilder().token(config.BOT_TOKEN).build()
 
     # Cancel filter (ប៊ូតុងបោះបង់ ឬបញ្ជា /cancel)
     cancel_filter = filters.Regex("^❌ បោះបង់$") | filters.Regex(r"^/cancel")
@@ -168,6 +158,8 @@ def main():
 
     # A. បន្ថែមទំនិញថ្មី (Add Product)
     add_product_conv = ConversationHandler(
+        name="add_product_conv",
+        persistent=_persist,
         entry_points=[
             MessageHandler(filters.Regex("^➕ បន្ថែមទំនិញថ្មី$"), add_product_start),
             CommandHandler("addproduct", add_product_start)
@@ -209,6 +201,8 @@ def main():
 
     # B. នាំចូលទំនិញ (Stock In)
     stock_in_conv = ConversationHandler(
+        name="stock_in_conv",
+        persistent=_persist,
         entry_points=[
             MessageHandler(filters.Regex("^📥 នាំចូលទំនិញ$"), stock_in_start),
             CommandHandler("stockin", stock_in_start),
@@ -242,6 +236,8 @@ def main():
 
     # C. នាំចេញ/កាត់ស្តុក (Stock Out)
     stock_out_conv = ConversationHandler(
+        name="stock_out_conv",
+        persistent=_persist,
         entry_points=[
             MessageHandler(filters.Regex("^📤 នាំចេញ/លក់$"), stock_out_start),
             CommandHandler("stockout", stock_out_start),
@@ -269,6 +265,8 @@ def main():
 
     # D. ស្វែងរកទំនិញ (Search Product)
     search_conv = ConversationHandler(
+        name="search_conv",
+        persistent=_persist,
         entry_points=[
             MessageHandler(filters.Regex("^🔍 ស្វែងរកទំនិញ$"), search_start),
             CommandHandler("search", search_start)
@@ -286,6 +284,8 @@ def main():
 
     # E. កែប្រែទំនិញ (Edit Product)
     edit_product_conv = ConversationHandler(
+        name="edit_product_conv",
+        persistent=_persist,
         entry_points=[
             CallbackQueryHandler(edit_product_menu_callback, pattern=r"^act_edit:\d+$")
         ],
@@ -338,6 +338,31 @@ def main():
 
     # Error Handler
     app.add_error_handler(error_handler)
+
+    return app
+
+
+def main():
+    print("==================================================")
+    print("🚀 កំពុងចាប់ផ្តើម Telegram Inventory Bot...")
+    print("==================================================")
+
+    # 1. ពិនិត្យ Token
+    if not config.BOT_TOKEN or config.BOT_TOKEN == "your_telegram_bot_token_here":
+        print("\n❌ កំហុស៖ មិនទាន់ឃើញ TELEGRAM_BOT_TOKEN ក្នុងឯកសារ .env ឡើយ!")
+        print("👉 សូមបង្កើតឯកសារ .env (ចម្លងពី .env.example) រួចដាក់ Token របស់ Bot របស់អ្នក។\n")
+        print("ឧទាហរណ៍ក្នុងឯកសារ .env:")
+        print("TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrSTUvwxYZ")
+        print("ADMIN_USER_IDS=123456789\n")
+        sys.exit(1)
+
+    # 2. បង្កើត SQLite Database
+    print("📦 កំពុងរៀបចំ Database (inventory.db)...")
+    db.init_db()
+    print("✅ Database រួចរាល់!")
+
+    app = build_application()
+
 
     print("🤖 Bot កំពុងដំណើរការ... (ចុច Ctrl + C ដើម្បីបញ្ឈប់)")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

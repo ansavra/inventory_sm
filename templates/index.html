@@ -381,6 +381,29 @@
                 </form>
             </div>
 
+            <!-- Telegram Webhook Card (Admin Only) -->
+            <div class="table-card" style="margin-top: 1.5rem; padding: 1.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1.05rem; color: #a78bfa; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🔗 Telegram Bot Webhook (សម្រាប់ដំណើរការលើ Cloud)</span>
+                        </h3>
+                        <p class="text-muted small" style="margin-top: 0.25rem;">
+                            នៅលើ Vercel, Bot ត្រូវប្រើ Webhook ជំនួស Polling។ ចុច «ចុះឈ្មោះ Webhook» ម្តង បន្ទាប់ពី deploy រួច។
+                            <br>⚠️ បើប្រើ Bot ក្នុង local (polling) សូមចុច «លុប Webhook» ជាមុនសិន។
+                        </p>
+                    </div>
+                    <span class="badge" id="webhook-status-badge">...</span>
+                </div>
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <input type="url" id="webhook-base-url" placeholder="https://your-app.vercel.app (ទុកទទេ = ប្រើ URL បច្ចុប្បន្ន)"
+                           style="flex: 1; min-width: 280px; background: rgba(31, 41, 55, 0.7); border: 1px solid var(--border-color); padding: 0.65rem 0.9rem; border-radius: var(--radius-sm); color: var(--text-primary);">
+                    <button type="button" class="btn btn-primary" id="btn-set-webhook">🔗 ចុះឈ្មោះ Webhook</button>
+                    <button type="button" class="btn btn-secondary" id="btn-delete-webhook">🗑️ លុប Webhook</button>
+                </div>
+                <p class="text-muted small" style="margin-top: 0.75rem;" id="webhook-info"></p>
+            </div>
+
             <!-- Telegram Real-Time Alerts Settings Card (Admin Only) -->
             <div class="table-card" style="margin-top: 1.5rem; padding: 1.5rem;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">

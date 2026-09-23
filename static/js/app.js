@@ -866,6 +866,7 @@ function switchTab(targetId) {
     } else if (targetId === 'tab-users') {
         fetchUsers();
         fetchGoogleSheetsConfig();
+        fetchWebhookInfo();
     }
 }
 
@@ -1330,6 +1331,81 @@ async function updateSystemStatusPill() {
     } catch (e) {
         // មិនអីទេ — រក្សាអត្ថបទលំនាំដើម
     }
+}
+
+// ==========================================
+// Telegram Webhook (Admin)
+// ==========================================
+async function fetchWebhookInfo() {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    const badge = document.getElementById('webhook-status-badge');
+    const info = document.getElementById('webhook-info');
+    if (!badge) return;
+    try {
+        const res = await fetch('/api/telegram/webhook-info');
+        if (!res.ok) throw new Error('មិនអាចពិនិត្យបាន');
+        const data = await res.json();
+        const url = (data.telegram && data.telegram.url) || '';
+        if (url) {
+            badge.className = 'badge badge-success';
+            badge.textContent = '✅ ចុះឈ្មោះរួច';
+            const pending = (data.telegram.pending_update_count ?? 0);
+            const err = data.telegram.last_error_message
+                ? ' · ❌ ' + escapeHtml(data.telegram.last_error_message) : '';
+            const masked = escapeHtml(url.replace(/[^/]+$/, '****'));
+            info.innerHTML = 'URL: <code>' + masked + '</code> · សារកំពុងរង់ចាំ: ' + pending + err;
+        } else {
+            badge.className = 'badge badge-muted';
+            badge.textContent = '⚪ មិនទាន់ចុះឈ្មោះ (Polling)';
+            info.textContent = data.configured_secret
+                ? 'Bot កំពុងប្រើ Polling (local) — មិនទាន់ភ្ជាប់ទៅ Cloud ទេ។'
+                : '⚠️ មិនទាន់កំណត់ TELEGRAM_WEBHOOK_SECRET ក្នុង .env / Vercel ទេ';
+        }
+    } catch (err) {
+        badge.className = 'badge badge-danger';
+        badge.textContent = '❓ មិនអាចពិនិត្យបាន';
+    }
+}
+
+const btnSetWebhook = document.getElementById('btn-set-webhook');
+if (btnSetWebhook) {
+    btnSetWebhook.addEventListener('click', async () => {
+        const base = document.getElementById('webhook-base-url').value.trim();
+        btnSetWebhook.disabled = true;
+        try {
+            const res = await fetch('/api/telegram/set-webhook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ base_url: base || null })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'បរាជ័យ');
+            showToast(data.message);
+            fetchWebhookInfo();
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            btnSetWebhook.disabled = false;
+        }
+    });
+}
+
+const btnDeleteWebhook = document.getElementById('btn-delete-webhook');
+if (btnDeleteWebhook) {
+    btnDeleteWebhook.addEventListener('click', async () => {
+        btnDeleteWebhook.disabled = true;
+        try {
+            const res = await fetch('/api/telegram/delete-webhook', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'បរាជ័យ');
+            showToast('🗑️ បានលុប Webhook — Bot ប្តូរមក Polling វិញ');
+            fetchWebhookInfo();
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally {
+            btnDeleteWebhook.disabled = false;
+        }
+    });
 }
 
 // Initial boot

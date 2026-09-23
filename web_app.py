@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -9,6 +10,7 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel
 
+import config
 import database as db
 import auth
 import export_service
@@ -817,6 +819,89 @@ async def test_telegram_alert(admin: Dict[str, Any] = Depends(require_admin)):
     )
     return {"success": True, "message": "បានផ្ញើសារតេស្តទៅកាន់ Telegram រួចរាល់!"}
 
+
+
+# ==========================================
+# Telegram Webhook (សម្រាប់ដំណើរការលើ Vercel)
+# ==========================================
+
+@app.post("/api/telegram/webhook/{secret}")
+async def telegram_webhook(secret: str, request: Request):
+    """ទទួលសារពី Telegram (Webhook mode) — ប្រើលើ Vercel ជំនួស long-polling"""
+    expected = config.TELEGRAM_WEBHOOK_SECRET
+    if not expected or secret != expected:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    try:
+        import bot_app
+        await bot_app.process_update(payload)
+    except Exception as e:
+        # ឆ្លើយ 200 ជានិច្ច ដើម្បីកុំឱ្យ Telegram ព្យាយាមផ្ញើឡើងវិញមិនឈប់
+        print(f"⚠️ telegram_webhook error: {e}")
+    return {"ok": True}
+
+
+class WebhookSetupRequest(BaseModel):
+    base_url: Optional[str] = None
+
+
+@app.get("/api/telegram/webhook-info")
+async def telegram_webhook_info(admin: Dict[str, Any] = Depends(require_admin)):
+    """ពិនិត្យស្ថានភាព Webhook បច្ចុប្បន្នរបស់ Bot"""
+    if not config.BOT_TOKEN:
+        raise HTTPException(status_code=400, detail="មិនទាន់កំណត់ TELEGRAM_BOT_TOKEN ទេ!")
+    import urllib.request
+    url = f"https://api.telegram.org/bot{config.BOT_TOKEN}/getWebhookInfo"
+    with urllib.request.urlopen(url, timeout=15) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return {
+        "configured_secret": bool(config.TELEGRAM_WEBHOOK_SECRET),
+        "telegram": data.get("result", {}),
+    }
+
+
+@app.post("/api/telegram/set-webhook")
+async def telegram_set_webhook(req: WebhookSetupRequest, request: Request,
+                               admin: Dict[str, Any] = Depends(require_admin)):
+    """ចុះឈ្មោះ Webhook ទៅ Telegram (ត្រូវការ TELEGRAM_BOT_TOKEN និង TELEGRAM_WEBHOOK_SECRET)"""
+    if not config.BOT_TOKEN:
+        raise HTTPException(status_code=400, detail="មិនទាន់កំណត់ TELEGRAM_BOT_TOKEN ទេ!")
+    if not config.TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=400, detail="មិនទាន់កំណត់ TELEGRAM_WEBHOOK_SECRET ទេ!")
+
+    base = (req.base_url or "").strip().rstrip("/")
+    if not base:
+        base = str(request.base_url).rstrip("/")
+    if not base.startswith("https://"):
+        raise HTTPException(status_code=400, detail="Telegram ទាមទារ URL ជា https:// ប៉ុណ្ណោះ!")
+
+    hook_url = f"{base}/api/telegram/webhook/{config.TELEGRAM_WEBHOOK_SECRET}"
+    import urllib.parse
+    import urllib.request
+    api = (f"https://api.telegram.org/bot{config.BOT_TOKEN}/setWebhook"
+           f"?url={urllib.parse.quote(hook_url, safe='')}&drop_pending_updates=true")
+    with urllib.request.urlopen(api, timeout=20) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    if not data.get("ok"):
+        raise HTTPException(status_code=400, detail=f"Telegram បដិសេធ៖ {data}")
+    return {"success": True, "message": "ចុះឈ្មោះ Webhook ជោគជ័យ!", "url": hook_url}
+
+
+@app.post("/api/telegram/delete-webhook")
+async def telegram_delete_webhook(admin: Dict[str, Any] = Depends(require_admin)):
+    """លុប Webhook (ត្រឡប់ទៅ polling វិញ សម្រាប់ដំណើរការក្នុង local)"""
+    if not config.BOT_TOKEN:
+        raise HTTPException(status_code=400, detail="មិនទាន់កំណត់ TELEGRAM_BOT_TOKEN ទេ!")
+    import urllib.request
+    url = f"https://api.telegram.org/bot{config.BOT_TOKEN}/deleteWebhook?drop_pending_updates=false"
+    with urllib.request.urlopen(url, timeout=15) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return {"success": bool(data.get("ok")), "telegram": data}
 
 
 if __name__ == "__main__":

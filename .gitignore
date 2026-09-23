@@ -28,3 +28,4 @@ Thumbs.db
 
 # Database backups
 inventory_backup_*.db
+.env.backup_*

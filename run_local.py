@@ -113,6 +113,20 @@ def cleanup():
     print("✅ បានបិទរួចរាល់។")
 
 
+def find_free_port(preferred: int = 8000, tries: int = 20) -> int:
+    """រក Port ទំនេរ (បើ Port ដើមមានកម្មវិធីផ្សេងកាន់កាប់រួច នឹងរើស Port បន្ទាប់)"""
+    for offset in range(tries):
+        port = preferred + offset
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+        return port
+    return preferred
+
+
 def wait_for_web(port=8000, timeout=12):
     start = time.time()
     while time.time() - start < timeout:
@@ -130,7 +144,10 @@ def wait_for_web(port=8000, timeout=12):
 def main():
     try:
         local_ip = get_local_ip()
-        port = 8000
+        preferred = int(os.environ.get("SM_PORT", "8000"))
+        port = find_free_port(preferred)
+        if port != preferred:
+            print(f"⚠️ Port {preferred} មានកម្មវិធីផ្សេងកាន់កាប់រួចហើយ — ប្តូរទៅ Port {port} ជំនួស")
 
         print("=" * 65)
         print("  🚀 ចាប់ផ្តើមដំណើរការប្រព័ន្ធ SM Inventory ក្នុង LOCAL SERVER")

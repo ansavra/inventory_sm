@@ -161,3 +161,7 @@ Container លើ Render ត្រូវបាន rebuild រាល់ពេល d
 - **លើ Vercel**៖ ប្រើ Webhook (state នៃសន្ទនារក្សាក្នុងតារាង `bot_state`)
 - **ក្នុង local**៖ ប្រើ Polling — ត្រូវចុច «លុប Webhook» ជាមុនសិន បើមិនដូច្នេះវានឹងប៉ះទង្គិចគ្នា
 - ការស្កេន Barcode/QR ដំណើរការតែក្នុង local (Vercel គ្មាន library `libzbar`)
+
+### ⚠️ Port ជាន់គ្នា
+បើ Port 8000 មានកម្មវិធីផ្សេងកាន់កាប់រួច launcher នឹងប្តូរទៅ 8001, 8002... ដោយស្វ័យប្រវត្តិ
+(មើល URL ពិតប្រាកដក្នុង `logs/launcher.log`)។ ចង់កំណត់ខ្លួនឯង៖ `SM_PORT=8010` ក្នុង `.env`។

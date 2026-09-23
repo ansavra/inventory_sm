@@ -32,6 +32,12 @@ TEMPLATES_DIR.mkdir(exist_ok=True)
 
 jinja_env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=True)
 
+# បង្កើតតារាង (បើមិនទាន់មាន) ពេលចាប់ផ្តើម — ចាំបាច់សម្រាប់ Vercel/Supabase
+try:
+    db.init_db()
+except Exception as _e:  # pragma: no cover
+    print(f"⚠️ init_db: {_e}")
+
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
@@ -220,9 +226,15 @@ async def api_me(user: Dict[str, Any] = Depends(require_auth)):
 @app.get("/api/system/status")
 async def api_system_status(user: Dict[str, Any] = Depends(require_auth)):
     """ស្ថានភាពប្រព័ន្ធ៖ Telegram Bot កំពុងដំណើរការជាមួយ Web នេះឬអត់ (Local vs Cloud)"""
+    import db_core
     mode = "cloud" if os.environ.get("SM_MODE") == "cloud" else "local"
     telegram_bot = os.environ.get("SM_WITH_BOT") == "1" or os.environ.get("SM_MODE") == "cloud"
-    return {"telegram_bot": telegram_bot, "mode": mode}
+    return {
+        "telegram_bot": telegram_bot,
+        "mode": mode,
+        "database": "supabase" if db_core.IS_PG else "sqlite",
+        "database_label": db_core.backend_name(),
+    }
 
 
 # ==========================================

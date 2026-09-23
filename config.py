@@ -19,6 +19,19 @@ if _admin_raw:
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "inventory.db"))
 
+# Postgres / Supabase — បើកំណត់ DATABASE_URL ប្រព័ន្ធនឹងប្រើ Supabase ជំនួស SQLite
+# ឧ. postgresql://postgres.xxxx:PASSWORD@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+# Schema ក្នុង Postgres (ដាក់ដាច់ពីតារាងផ្សេងក្នុង Supabase project ដដែល)
+DB_SCHEMA = os.getenv("DB_SCHEMA", "sm").strip() or "sm"
+
+# តំបន់ម៉ោងសម្រាប់កត់ត្រាកាលបរិច្ឆេទ
+APP_TZ = os.getenv("APP_TZ", "Asia/Phnom_Penh").strip() or "Asia/Phnom_Penh"
+
+# លេខសម្ងាត់សម្រាប់ Telegram Webhook (path secret)
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
+
 
 def _prepare_database_path() -> None:
     """

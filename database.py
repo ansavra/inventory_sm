@@ -1,20 +1,22 @@
-import sqlite3
 import datetime
 from typing import Optional, List, Dict, Any, Tuple
 from config import DATABASE_PATH, ADMIN_IDS
 
-
-def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON;")
-    return conn
+import db_core
+from db_core import get_connection, IS_PG, IntegrityError, backend_name
 
 
 def init_db():
     """បង្កើតតារាងចាំបាច់ក្នុង Database ប្រសិនបើមិនទាន់មាន"""
     with get_connection() as conn:
         cursor = conn.cursor()
+
+        if IS_PG:
+            # Postgres / Supabase — ប្រើ Schema ដាច់ដោយឡែក (គ្មាន PRAGMA)
+            db_core.init_pg_schema(cursor)
+            _seed_admin_accounts(cursor)
+            conn.commit()
+            return
 
         # តារាងអ្នកប្រើប្រាស់ (Users)
         cursor.execute("""
@@ -123,6 +125,17 @@ def init_db():
         if 'password_hash' not in columns:
             cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT '';")
 
+        # តារាងបន្ថែម (sessions / settings / bot state)
+        for stmt in [x.strip() for x in db_core.SQLITE_EXTRA_SCHEMA.split(";") if x.strip()]:
+            cursor.execute(stmt + ";")
+
+        _seed_admin_accounts(cursor)
+        conn.commit()
+
+
+def _seed_admin_accounts(cursor) -> None:
+    """បញ្ចូលគណនី Admin ដំបូង (ប្រើរួមគ្នាទាំង SQLite និង Postgres)"""
+    if True:
         # បញ្ចូល Admin ដំបូងពី Config
         for admin_id in ADMIN_IDS:
             cursor.execute("""
@@ -146,8 +159,6 @@ def init_db():
             cursor.execute("""
                 UPDATE users SET password_hash = ? WHERE username = 'admin';
             """, (default_pwd_hash,))
-
-        conn.commit()
 
 
 # ==========================================
@@ -297,7 +308,7 @@ def add_product(
             product_id = cursor.lastrowid
             conn.commit()
             return True, "ជោគជ័យ", product_id
-        except sqlite3.IntegrityError:
+        except IntegrityError:
             return False, f"កូដទំនិញ '{code}' មានរួចហើយក្នុងប្រព័ន្ធ!", None
 
 
@@ -384,7 +395,7 @@ def normalize_batch_no(value: Optional[Any]) -> str:
     return text[:64]
 
 
-def _upsert_batch(cursor: sqlite3.Cursor, product_id: int, expiry_date: str, quantity: int, batch_no: str = '') -> int:
+def _upsert_batch(cursor: Any, product_id: int, expiry_date: str, quantity: int, batch_no: str = '') -> int:
     """បន្ថែមចំនួនចូលឡូតិ៍ដែលមានលេខឡូតិ៍ + ថ្ងៃផុតកំណត់ដូចគ្នា ឬបង្កើតឡូតិ៍ថ្មី; ត្រឡប់ batch_id"""
     cursor.execute(
         "SELECT id FROM product_batches WHERE product_id = ? AND batch_no = ? AND expiry_date = ?",
@@ -406,7 +417,7 @@ def _upsert_batch(cursor: sqlite3.Cursor, product_id: int, expiry_date: str, qua
 
 
 def _deduct_from_batches(
-    cursor: sqlite3.Cursor,
+    cursor: Any,
     product_id: int,
     quantity: int,
     batch_id: Optional[int] = None

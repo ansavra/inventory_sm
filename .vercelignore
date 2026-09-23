@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+cloudflared.exe
+*.db
+logs/
+.sm_pids
+tunnel_url.txt
+*.vbs
+*.bat
+run_system.py
+run_local.py
+run_cloud.py
+Dockerfile
+Procfile
+test_database.py

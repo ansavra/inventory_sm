@@ -1322,9 +1322,11 @@ async function updateSystemStatusPill() {
         const res = await fetch('/api/system/status');
         if (!res.ok) return;
         const data = await res.json();
-        pillText.textContent = data.telegram_bot
-            ? '🤖 Telegram Bot: សកម្ម'
-            : '💻 Local Mode (គ្មាន Bot)';
+        const bot = data.telegram_bot ? '🤖 Bot សកម្ម' : '💻 Local (គ្មាន Bot)';
+        const store = data.database === 'supabase' ? '☁️ Supabase' : '💾 SQLite';
+        pillText.textContent = `${bot} · ${store}`;
+        const pill = document.getElementById('status-pill');
+        if (pill) pill.title = data.database_label || '';
     } catch (e) {
         // មិនអីទេ — រក្សាអត្ថបទលំនាំដើម
     }

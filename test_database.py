@@ -22,6 +22,8 @@ def run_tests():
         os.remove(TEST_DB_PATH)
 
     db.DATABASE_PATH = TEST_DB_PATH
+    import db_core
+    db_core.DATABASE_PATH = TEST_DB_PATH   # get_connection អានពី db_core
 
     # 1. Init DB
     db.init_db()

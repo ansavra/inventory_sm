@@ -14,19 +14,33 @@ WEBHOOK_URL = os.getenv("GOOGLE_SHEET_WEBHOOK_URL", "").strip()
 
 
 def set_webhook_url(url: str):
-    """កំណត់ ឬផ្លាស់ប្តូរ Webhook URL ក្នុងពេលដំណើរការ"""
+    """កំណត់ ឬផ្លាស់ប្តូរ Webhook URL (រក្សាក្នុង Database ដើម្បីឱ្យនៅគង់វង្សលើ serverless)"""
     global WEBHOOK_URL
     WEBHOOK_URL = url.strip()
+    try:
+        import db_core
+        db_core.set_setting("google_sheet_webhook_url", WEBHOOK_URL)
+    except Exception as e:
+        logger.warning(f"មិនអាចរក្សា Google Sheet Webhook URL ក្នុង Database: {e}")
 
 
 def get_webhook_url() -> str:
+    """អាន Webhook URL ពី Database មុន (បើគ្មាន ប្រើតម្លៃពី .env)"""
+    global WEBHOOK_URL
+    try:
+        import db_core
+        stored = db_core.get_setting("google_sheet_webhook_url", "")
+        if stored:
+            WEBHOOK_URL = stored
+    except Exception:
+        pass
     return WEBHOOK_URL
 
 
 def _send_payload_async(payload: Dict[str, Any]):
     """បញ្ជូនទិន្នន័យទៅ Google Sheets ដោយប្រើ Threading (មិនធ្វើឱ្យ Bot ឬ Web យឺតឡើយ)"""
     def worker():
-        url = WEBHOOK_URL
+        url = get_webhook_url()
         if not url:
             return
 
@@ -60,7 +74,7 @@ def sync_transaction(
     stock_remaining: int
 ):
     """បញ្ជូនប្រតិបត្តិការ នាំចូល ឬ នាំចេញ ទៅ Google Sheets ដោយស្វ័យប្រវត្តិ"""
-    if not WEBHOOK_URL:
+    if not get_webhook_url():
         return
 
     payload = {
@@ -90,7 +104,7 @@ def sync_product(
     location: str
 ):
     """បញ្ជូនទំនិញថ្មីទៅ Sheet ទំនិញ"""
-    if not WEBHOOK_URL:
+    if not get_webhook_url():
         return
 
     payload = {

@@ -225,6 +225,33 @@ async def api_me(user: Dict[str, Any] = Depends(require_auth)):
     return user
 
 
+@app.get("/api/health")
+async def api_health():
+    """ពិនិត្យសុខភាពប្រព័ន្ធ (សាធារណៈ — មិនបង្ហាញតម្លៃសម្ងាត់ទេ)"""
+    import db_core
+    out = {
+        "ok": True,
+        "database": "supabase" if db_core.IS_PG else "sqlite",
+        "schema": config.DB_SCHEMA if db_core.IS_PG else None,
+        "mode": os.environ.get("SM_MODE", "local"),
+        "has_database_url": bool(config.DATABASE_URL),
+        "has_bot_token": bool(config.BOT_TOKEN),
+        "has_webhook_secret": bool(config.TELEGRAM_WEBHOOK_SECRET),
+    }
+    try:
+        with db_core.get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) AS n FROM users")
+            row = cur.fetchone()
+            out["connected"] = True
+            out["users"] = row["n"] if not isinstance(row, (list, tuple)) else row[0]
+    except Exception as e:
+        out["ok"] = False
+        out["connected"] = False
+        out["error"] = f"{type(e).__name__}: {str(e)[:200]}"
+    return out
+
+
 @app.get("/api/system/status")
 async def api_system_status(user: Dict[str, Any] = Depends(require_auth)):
     """ស្ថានភាពប្រព័ន្ធ៖ Telegram Bot កំពុងដំណើរការជាមួយ Web នេះឬអត់ (Local vs Cloud)"""
